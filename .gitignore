@@ -2,6 +2,12 @@
 *.DS_Store
 *Thumbs.db
 
+# Lex-files
+*lex.yy.c
+*y.output
+*y.tab.c
+*y.tab.h
+
 # Prerequisites
 *.d
 
