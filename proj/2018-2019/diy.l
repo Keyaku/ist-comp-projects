@@ -1,15 +1,46 @@
 %{
+
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include "node.h"
 #include "y.tab.h"
-void yyerror(char *s);
+
+void yyerror(const char *s);
+
 %}
+
+SPACE [ \t]
+
+%x COM STR
+
 %%
-"for"			return FOR;
-[0-9]+			yylval.i = strtol(yytext, 0, 10); return INT;
-.			yyerror("Unknown character");
+
+<COM>.|\n         ;
+<COM>"*/"         BEGIN 0;
+
+"/*"              BEGIN COM;
+
+[0-9]+            yylval.i = strtol(yytext, 0, 10); return INT;
+
+\"                BEGIN STR;
+<STR>\"           BEGIN 0; return STRING;
+<STR>"*n"         strcat(yylval.str, "\n");
+<STR>"*t"         strcat(yylval.str, "\t");
+<STR>"*0"         strcat(yylval.str, "\0");
+<STR>"*("         strcat(yylval.str, "{");
+<STR>"*)"         strcat(yylval.str, "}");
+<STR>\*[*'"]      strcat(yylval.str, yytext+1);
+<STR>\*.          yyerror("invalid escape sequence in string");
+<STR>.|\n         strcat(yylval.str, yytext);
+
+[0-9]+\.[0.9]     yylval.f = strtof(yytext, 0); return FLOAT;
+
+"for"             return FOR;
+.                 yyerror("Unknown character");
+
 %%
+
+/* Code */
 int yywrap(void) { return 1; }
 char *getyytext() { return yytext; }

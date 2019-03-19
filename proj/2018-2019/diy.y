@@ -10,7 +10,9 @@ void yyerror(char *s);
 %}
 
 %union {
-	int i;			/* integer value */
+	int i;     /* integer value */
+	char *str; /* string */
+	double *f; /* float */
 };
 
 %token <i> INT
