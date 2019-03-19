@@ -16,14 +16,18 @@ void yyerror(char *s);
 };
 
 %token <i> INT
-%token <str> STRING
+%token <str> STRING NAME
 %token <f> FLOAT
 
 %token FOR
+
 %%
+
 file	:
 	;
+
 %%
+
 char **yynames =
 #if YYDEBUG > 0
 		 (char**)yyname;
