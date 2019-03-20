@@ -25,24 +25,24 @@ void yyerror(const char *s);
 
 "==".*\n          ;
 
-void              ;
-integer           ;
-string            ;
-public            ;
-number            ;
-const             ;
-if                ;
-then              ;
-else              ;
-while             ;
-do                ;
+void              return VOID;
+integer           return TYPE_INT;
+string            return TYPE_STR;
+number            return TYPE_NUM;
+public            return PUBLIC;
+const             return CONST;
+if                return IF;
+then              return THEN;
+else              return ELSE;
+while             return WHILE;
+do                return DO;
 for               return FOR;
-in                ;
-step              ;
-upto              ;
-downto            ;
-break             ;
-continue          ;
+in                return IN;
+step              return STEP;
+upto              return UPTO;
+downto            return DOWNTO;
+break             return BREAK;
+continue          return CONTINUE;
 
 [a-zA-Z_\b][a-zA-Z_\b0-9]* yylval.str = strdup(yytext); return NAME;
 
