@@ -48,10 +48,16 @@ continue          return CONTINUE;
 [a-zA-Z_\b][a-zA-Z_\b0-9]* yylval.str = strdup(yytext); return NAME;
 
 0                 yylval.i = 0; return INT;
-[1-9][0-9]+       yylval.i = strtol(yytext, NULL, 10); return INT;
+[1-9][0-9]+       { errno = 0; yylval.i = strtol(yytext, NULL, 10);
+					if (errno == ERANGE) yyerror("decimal overflow");
+					return INT; }
+0b[0-1]*          { errno = 0; yylval.i = strtol(yytext, NULL, 2);
+					if (errno == ERANGE) yyerror("binary overflow");
+					return INT; }
 0[0-9]*           yylval.i = octal(yytext); return INT;
-0b[0-1]*          yylval.i = strtol(yytext, NULL, 2); return INT;
-[0-9]+\.[0.9]+    yylval.d = strtod(yytext, NULL); return NUMBER;
+[0-9]+\.[0.9]+    { errno = 0; yylval.d = strtod(yytext, NULL);
+					if (errno == ERANGE) yyerror("floating-point overflow");
+					return INT; }
 
 \"[.*$]*[^\\]\"   yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
 \"                yy_push_state(STR);
