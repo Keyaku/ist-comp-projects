@@ -12,12 +12,12 @@ void yyerror(char *s);
 %union {
 	long i;    /* 4-byte integer value */
 	char *str; /* string */
-	double f;  /* number */
+	double d;  /* number */
 };
 
 %token <i> INT
 %token <str> STRING NAME
-%token <f> NUMBER
+%token <d> NUMBER
 
 %token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
 %token PUBLIC CONST
