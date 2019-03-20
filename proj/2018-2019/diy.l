@@ -67,7 +67,8 @@ continue          return CONTINUE;
 <STR>"\t"         strcat(yylval.str, "\t");
 <STR>"\0"         yyerror("NULL character in string");
 <STR>.|\n         strcat(yylval.str, yytext);
-<STR>\\[0-9a-fA-F]?[0-9a-fA-F] { char c = (char) strtol(yytext+1, NULL, 16); strncat(yylval.str, &c, 1); }
+<STR>\\[0-9a-fA-F]?[0-9a-fA-F] { char c = (char) strtol(yytext+1, NULL, 16);
+					strncat(yylval.str, &c, 1); }
 
 .                 yyerror("Unknown character");
 
