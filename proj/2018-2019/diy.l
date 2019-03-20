@@ -49,7 +49,7 @@ continue          return CONTINUE;
 
 [1-9][0-9]+       yylval.i = strtol(yytext, 0, 10); return INT;
 0[0-9]*           yylval.i = octal(yytext); return INT;
-[0-9]+\.[0.9]     yylval.d = strtod(yytext, 0); return NUMBER;
+[0-9]+\.[0.9]+    yylval.d = strtod(yytext, 0); return NUMBER;
 
 \"[.*$]*[^\\]\"   yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
 \"                yy_push_state(STR);
