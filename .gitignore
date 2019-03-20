@@ -2,6 +2,9 @@
 *.DS_Store
 *Thumbs.db
 
+# Project files
+*.code-workspace
+
 # Lex-files
 *lex.yy.c
 *y.output
