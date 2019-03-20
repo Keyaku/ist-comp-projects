@@ -9,7 +9,7 @@
 #include "y.tab.h"
 
 void yyerror(const char *s);
-int octal(char *s);
+int binary(char *s), octal(char *s);
 
 %}
 
@@ -47,9 +47,11 @@ continue          return CONTINUE;
 
 [a-zA-Z_\b][a-zA-Z_\b0-9]* yylval.str = strdup(yytext); return NAME;
 
-[1-9][0-9]+       yylval.i = strtol(yytext, 0, 10); return INT;
+0                 yylval.i = 0; return INT;
+[1-9][0-9]+       yylval.i = strtol(yytext, NULL, 10); return INT;
 0[0-9]*           yylval.i = octal(yytext); return INT;
-[0-9]+\.[0.9]+    yylval.d = strtod(yytext, 0); return NUMBER;
+0b[0-1]*          yylval.i = strtol(yytext, NULL, 2); return INT;
+[0-9]+\.[0.9]+    yylval.d = strtod(yytext, NULL); return NUMBER;
 
 \"[.*$]*[^\\]\"   yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
 \"                yy_push_state(STR);
@@ -73,16 +75,19 @@ char *getyytext() { return yytext; }
 
 int octal(char *s)
 {
-	int i, a = 0, b = 0, len = strlen(s);
+	int idx, a = 0, b = 0, c = 0, len = strlen(s);
 
-	for (i = 0; i < len; i++) {
-		if (s[i] < '0' || s[i] > '9') { break; }
-		b = b * 8 + s[i] - '0';
+	for (idx = 0; idx < len; idx++) {
+		if (s[idx] < '0' || s[idx] > '9') { break; }
+		if (s[idx] == '9') { c = 11; }
+		else { c = s[idx] - '0'; }
+		b = b * 8 + c;
 		if (b < a) {
 			yyerror("octal overflow");
 			break;
 		}
 		a = b;
 	}
+
 	return a;
 }
