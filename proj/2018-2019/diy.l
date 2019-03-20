@@ -16,7 +16,7 @@ void yyerror(const char *s);
 
 %%
 
-[ \t\r\n]         ;
+[ \t\r\n]+        ;
 
 "=<"              yy_push_state(COM);
 <COM>.|\n         ;
@@ -48,6 +48,7 @@ continue          ;
 
 [0-9]+            yylval.i = strtol(yytext, 0, 10); return INT;
 
+\"[.*$]*[^\\]\"   yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
 \"                yy_push_state(STR);
 <STR>\"           yy_pop_state(); return STRING;
 <STR>"\n"         strcat(yylval.str, "\n");
