@@ -8,6 +8,8 @@
 
 void yyerror(const char *s);
 
+int nested = 0;
+
 %}
 
 SPACE [ \t]
@@ -16,23 +18,19 @@ SPACE [ \t]
 
 %%
 
+"=<"              BEGIN COM;
 <COM>.|\n         ;
-<COM>"*/"         BEGIN 0;
-
-"/*"              BEGIN COM;
+<COM>"=<"         nested++;
+<COM>"=>"         if (nested == 0) { BEGIN 0; } else { nested--; }
 
 [0-9]+            yylval.i = strtol(yytext, 0, 10); return INT;
 
 \"                BEGIN STR;
 <STR>\"           BEGIN 0; return STRING;
+<STR>.|\n         strcat(yylval.str, yytext);
 <STR>"*n"         strcat(yylval.str, "\n");
 <STR>"*t"         strcat(yylval.str, "\t");
 <STR>"*0"         strcat(yylval.str, "\0");
-<STR>"*("         strcat(yylval.str, "{");
-<STR>"*)"         strcat(yylval.str, "}");
-<STR>\*[*'"]      strcat(yylval.str, yytext+1);
-<STR>\*.          yyerror("invalid escape sequence in string");
-<STR>.|\n         strcat(yylval.str, yytext);
 
 [0-9]+\.[0.9]     yylval.f = strtof(yytext, 0); return FLOAT;
 
