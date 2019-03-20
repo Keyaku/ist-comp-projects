@@ -8,12 +8,13 @@ CC=gcc
 CFLAGS=-g -DYYDEBUG
 
 
-$(LANG): $(LANG).y $(LANG).l $(LANG).brg
+$(LANG): $(LANG).y $(LANG).l #$(LANG).brg
 	make -C $(LIB)
 	flex -l $(LANG).l
 	byacc -dv $(LANG).y
-	pburg -T $(LANG).brg
-	$(LINK.c) -o $(LANG) $(ARCH) -I$(LIB) lex.yy.c y.tab.c yyselect.c -L$(LIB) -l$(UTIL)
+	#pburg -T $(LANG).brg
+	#$(LINK.c) -o $(LANG) $(ARCH) -I$(LIB) lex.yy.c y.tab.c yyselect.c -L$(LIB) -l$(UTIL)
+	$(LINK.c) -o $(LANG) $(ARCH) -I$(LIB) lex.yy.c y.tab.c -L$(LIB) -l$(UTIL)
 
 examples:: $(LANG)
 	make -C $(EXS)
