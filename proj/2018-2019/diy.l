@@ -9,7 +9,7 @@
 #include "y.tab.h"
 
 void yyerror(const char *s);
-int binary(char *s), octal(char *s);
+int octal(char *s);
 
 %}
 
@@ -44,6 +44,15 @@ upto              return UPTO;
 downto            return DOWNTO;
 break             return BREAK;
 continue          return CONTINUE;
+
+"<="              return LE;
+">="              return GE;
+"="               return EQ;
+"<>"              return NE;
+"++"              return INC;
+"--"              return DEC;
+":="              return ASSIGN;
+[-+*/%<>=!|&~]    return *yytext;
 
 [a-zA-Z_\b][a-zA-Z_\b0-9]* yylval.str = strdup(yytext); return NAME;
 

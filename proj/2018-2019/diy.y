@@ -24,6 +24,8 @@ void yyerror(char *s);
 %token IF THEN ELSE
 %token WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
 
+%token LE GE EQ NE INC DEC ASSIGN
+
 %%
 
 file	:
