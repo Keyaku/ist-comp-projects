@@ -19,7 +19,24 @@ void yyerror(char *s);
 %token <str> STRING NAME
 %token <f> NUMBER
 
+%token VOID
+%token TYPE_INT
+%token TYPE_STR
+%token TYPE_NUM
+%token PUBLIC
+%token CONST
+%token IF
+%token THEN
+%token ELSE
+%token WHILE
+%token DO
 %token FOR
+%token IN
+%token STEP
+%token UPTO
+%token DOWNTO
+%token BREAK
+%token CONTINUE
 
 %%
 
