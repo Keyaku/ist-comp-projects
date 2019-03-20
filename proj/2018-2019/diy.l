@@ -52,7 +52,8 @@ continue          return CONTINUE;
 "++"              return INC;
 "--"              return DEC;
 ":="              return ASSIGN;
-[-+*/%<>=!|&~]    return *yytext;
+[-+*/%<>!|&~]     return *yytext;
+[#{}()\[\];,]     return *yytext;
 
 [a-zA-Z_\b][a-zA-Z_\b0-9]* yylval.str = strdup(yytext); return NAME;
 
