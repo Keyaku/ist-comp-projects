@@ -25,7 +25,7 @@ void yyerror(const char *s);
 
 "==".*\n          ;
 
-void              return VOID;
+void              return TYPE_VOID;
 integer           return TYPE_INT;
 string            return TYPE_STR;
 number            return TYPE_NUM;
