@@ -48,8 +48,8 @@ continue          ;
 
 [0-9]+            yylval.i = strtol(yytext, 0, 10); return INT;
 
-\"                BEGIN STR;
-<STR>\"           BEGIN 0; return STRING;
+\"                yy_push_state(STR);
+<STR>\"           yy_pop_state(); return STRING;
 <STR>.|\n         strcat(yylval.str, yytext);
 <STR>"\n"         strcat(yylval.str, "\n");
 <STR>"\t"         strcat(yylval.str, "\t");
