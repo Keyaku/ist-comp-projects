@@ -10,14 +10,14 @@ void yyerror(char *s);
 %}
 
 %union {
-	int i;     /* integer value */
+	long i;    /* 4-byte integer value */
 	char *str; /* string */
-	double f;  /* float */
+	double f;  /* number */
 };
 
 %token <i> INT
 %token <str> STRING NAME
-%token <f> FLOAT
+%token <f> NUMBER
 
 %token FOR
 
@@ -30,7 +30,7 @@ file	:
 
 char **yynames =
 #if YYDEBUG > 0
-		 (char**)yyname;
+		(char**)yyname;
 #else
-		 0;
+		0;
 #endif
