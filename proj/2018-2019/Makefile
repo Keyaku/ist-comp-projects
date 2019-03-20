@@ -10,8 +10,8 @@ CFLAGS=-g -DYYDEBUG
 
 $(LANG): $(LANG).y $(LANG).l $(LANG).brg
 	make -C $(LIB)
-	byacc -dv $(LANG).y
 	flex -l $(LANG).l
+	byacc -dv $(LANG).y
 	pburg -T $(LANG).brg
 	$(LINK.c) -o $(LANG) $(ARCH) -I$(LIB) lex.yy.c y.tab.c yyselect.c -L$(LIB) -l$(UTIL)
 
