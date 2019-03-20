@@ -19,7 +19,10 @@ void yyerror(char *s);
 %token <str> STRING NAME
 %token <f> NUMBER
 
-%token FOR
+%token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
+%token PUBLIC CONST
+%token IF THEN ELSE
+%token WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
 
 %%
 
