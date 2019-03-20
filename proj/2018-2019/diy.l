@@ -50,10 +50,10 @@ continue          ;
 
 \"                yy_push_state(STR);
 <STR>\"           yy_pop_state(); return STRING;
-<STR>.|\n         strcat(yylval.str, yytext);
 <STR>"\n"         strcat(yylval.str, "\n");
 <STR>"\t"         strcat(yylval.str, "\t");
 <STR>"\0"         yyerror("NULL character in string");
+<STR>.|\n         strcat(yylval.str, yytext);
 
 [0-9]+\.[0.9]     yylval.f = strtof(yytext, 0); return NUMBER;
 
