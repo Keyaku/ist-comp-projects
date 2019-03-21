@@ -6,6 +6,7 @@
 #include "node.h"
 #include "tabid.h"
 extern int yylex();
+extern void* yyin;
 int yyerror(char *s);
 
 char *infile = "<<stdin>>";
@@ -52,6 +53,7 @@ int yyerror(char *s)
 int main(int argc, char *argv[]) {
 	extern YYSTYPE yylval;
 	int tk;
+	yyin = fopen(argv[1], "r");
 	while ((tk = yylex())) {
 		if (tk > YYERRCODE) {
 			printf("%d:\t%s\n", tk, yyname[tk]);
