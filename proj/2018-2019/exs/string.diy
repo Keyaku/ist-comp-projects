@@ -1,0 +1,36 @@
+== Prototypes ==
+public integer strcmp(const string str1, const string str2);
+public string  strcpy(string dst, const string src);
+public string  strchr(const string str, integer char);
+
+=< strcmp(str1, str2)
+Compares two strings.
+Returns 0 if they're the same; +1
+=>
+public integer strcmp(const string str1, const string str2) {
+	for ( ; *str1 = *str2; str1 := str1+1, str2 := str2+1) {
+		if (*str1 = 0) {
+			return 0;
+		}
+	}
+	if (*str1 < *str2) { strcmp := -1; }
+	strcmp := +1;
+}
+
+
+public string strcpy(string dst, const string src) {
+	string s := dst;
+    while (s <> 0) {
+		*s := *src;
+		src := src+1;
+		s := s+1;
+	}
+    strcpy := dst;
+}
+
+public string strchr(const string str, integer char) {
+    for ( ; *str <> char; str := str+1) {
+        if (*str = 0) { strcpy := ""; }
+	}
+    strchr := str;
+}
