@@ -26,7 +26,7 @@ examples:: $(LANG)
 	make -C $(EXS)
 
 zip::
-	zip -r e1.zip Makefile $(LANG).l $(LANG).y $(EXS)
+	zip -r proj.zip Makefile $(LANG).l $(LANG).y $(EXS)
 
 clean::
 	make -C $(LIB) clean
