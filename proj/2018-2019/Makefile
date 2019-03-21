@@ -7,13 +7,20 @@ EXS=exs # examples directory
 CC=gcc
 CFLAGS=-g -DYYDEBUG
 
+UNAME := $(shell uname -s)
 
-$(LANG): $(LANG).y $(LANG).l #$(LANG).brg
+
+$(LANG): $(LANG).y $(LANG).l $(LANG).brg
 	make -C $(LIB)
 	flex -l $(LANG).l
 	byacc -dv $(LANG).y
+ifeq ($(UNAME), Darwin)
+	$(LINK.c) -o $(LANG) $(ARCH) -I$(LIB) lex.yy.c y.tab.c -L$(LIB) -l$(UTIL)
+else
 	pburg -T $(LANG).brg
 	$(LINK.c) -o $(LANG) $(ARCH) -I$(LIB) lex.yy.c y.tab.c yyselect.c -L$(LIB) -l$(UTIL)
+endif
+
 
 examples:: $(LANG)
 	make -C $(EXS)
