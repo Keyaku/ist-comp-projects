@@ -52,10 +52,12 @@ int yyerror(char *s)
 int main(int argc, char *argv[]) {
 	extern YYSTYPE yylval;
 	int tk;
-	while ((tk = yylex()))
-		if (tk > YYERRCODE)
+	while ((tk = yylex())) {
+		if (tk > YYERRCODE) {
 			printf("%d:\t%s\n", tk, yyname[tk]);
-		else
+		} else {
 			printf("%d:\t%c\n", tk, tk);
+		}
+	}
 	return 0;
 }
