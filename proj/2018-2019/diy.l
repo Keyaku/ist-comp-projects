@@ -58,7 +58,7 @@ continue          return CONTINUE;
 [a-zA-Z_\b][a-zA-Z_\b0-9]* yylval.str = strdup(yytext); return NAME;
 
 0                 yylval.i = 0; return INT;
-[1-9][0-9]+       { errno = 0; yylval.i = strtol(yytext, NULL, 10);
+[1-9][0-9]*       { errno = 0; yylval.i = strtol(yytext, NULL, 10);
 					if (errno == ERANGE) yyerror("decimal overflow");
 					return INT; }
 0b[0-1]*          { errno = 0; yylval.i = strtol(yytext, NULL, 2);
