@@ -15,6 +15,8 @@ int octal(char *s);
 
 %x COM STR
 
+HEX [0-9a-fA-F]
+
 %%
 
 [ \t\r\n]+        ;
@@ -55,17 +57,17 @@ continue          return CONTINUE;
 [-+*/%<>!|&~]     return *yytext;
 [#{}()\[\];,]     return *yytext;
 
-[a-zA-Z_\b][a-zA-Z_\b0-9]* yylval.str = strdup(yytext); return NAME;
+[a-zA-Z_\b]\w* yylval.str = strdup(yytext); return IDENTIFIER;
 
 0                 yylval.i = 0; return INT;
-[1-9][0-9]*       { errno = 0; yylval.i = strtol(yytext, NULL, 10);
+[1-9]\d*          { errno = 0; yylval.i = strtol(yytext, NULL, 10);
 					if (errno == ERANGE) yyerror("decimal overflow");
 					return INT; }
 0b[0-1]*          { errno = 0; yylval.i = strtol(yytext, NULL, 2);
 					if (errno == ERANGE) yyerror("binary overflow");
 					return INT; }
-0[0-9]*           yylval.i = octal(yytext); return INT;
-[0-9]+\.[0.9]+    { errno = 0; yylval.d = strtod(yytext, NULL);
+0\d*              yylval.i = octal(yytext); return INT;
+\d+\.\d+          { errno = 0; yylval.d = strtod(yytext, NULL);
 					if (errno == ERANGE) yyerror("floating-point overflow");
 					return INT; }
 
@@ -77,7 +79,7 @@ continue          return CONTINUE;
 <STR>"\t"         strcat(yylval.str, "\t");
 <STR>"\0"         yyerror("NULL character in string");
 <STR>.|\n         strcat(yylval.str, yytext);
-<STR>\\[0-9a-fA-F]?[0-9a-fA-F] { char c = (char) strtol(yytext+1, NULL, 16);
+<STR>\\{HEX}?{HEX} { char c = (char) strtol(yytext+1, NULL, 16);
 					strncat(yylval.str, &c, 1); }
 
 .                 yyerror("Unknown character");

@@ -25,7 +25,7 @@ int errors;
 };
 
 %token <i> INT
-%token <str> STRING NAME
+%token <str> STRING IDENTIFIER
 %token <d> NUMBER
 
 %token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
