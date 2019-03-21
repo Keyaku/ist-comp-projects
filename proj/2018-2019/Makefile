@@ -9,7 +9,7 @@ CFLAGS=-g -DYYDEBUG
 
 UNAME := $(shell uname -s)
 
-
+# RULES
 $(LANG): $(LANG).y $(LANG).l $(LANG).brg
 	make -C $(LIB)
 	flex -l $(LANG).l
@@ -24,6 +24,9 @@ endif
 
 examples:: $(LANG)
 	make -C $(EXS)
+
+zip::
+	zip e1.zip Makefile $(LANG).l $(LANG).y $(EXS)
 
 clean::
 	make -C $(LIB) clean
