@@ -8,7 +8,17 @@
 #include "node.h"
 #include "y.tab.h"
 
+#define bool unsigned char
+#define true  1
+#define false 0
+
+#define arrlen(x)  (sizeof(x) / sizeof((x)[0]))
+
+extern int tk;
+
 int yyerror(const char *s);
+bool can_delimit(char *s);
+
 int octal(char *s);
 
 %}
@@ -16,10 +26,13 @@ int octal(char *s);
 %x COM STR
 
 HEX [0-9a-fA-F]
+ID [a-zA-Z][a-zA-Z0-9_]
 
 %%
 
-[ \t\r\n]+        ;
+[ \t\r]+          ;
+
+\n                if (can_delimit(yytext)) { return ';'; }
 
 "=<"              yy_push_state(COM);
 <COM>.|\n         ;
@@ -57,21 +70,22 @@ continue          return CONTINUE;
 [-+*/%<>!|&~]     return *yytext;
 [#{}()\[\];,]     return *yytext;
 
-[a-zA-Z][a-zA-Z0-9_]*    yylval.str = strdup(yytext); return IDENTIFIER;
+{ID}*             yylval.str = strdup(yytext); return IDENTIFIER;
 
-0                 yylval.i = 0; return INT;
+0                 yylval.i = 0; return INTEGER;
 [1-9]\d*          { errno = 0; yylval.i = strtol(yytext, NULL, 10);
 					if (errno == ERANGE) yyerror("decimal overflow");
-					return INT; }
+					return INTEGER; }
 0b[0-1]*          { errno = 0; yylval.i = strtol(yytext, NULL, 2);
 					if (errno == ERANGE) yyerror("binary overflow");
-					return INT; }
-0\d*              yylval.i = octal(yytext); return INT;
+					return INTEGER; }
+0\d*              yylval.i = octal(yytext); return INTEGER;
 \d+\.\d+          { errno = 0; yylval.d = strtod(yytext, NULL);
 					if (errno == ERANGE) yyerror("floating-point overflow");
-					return INT; }
+					return INTEGER; }
 
-\"[.*$]*[^\\]\"   yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
+\"[^*"][^\\]*\"   yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
+
 \"                yy_push_state(STR);
 <STR>\"           yy_pop_state(); return STRING;
 <STR>"\n"         strcat(yylval.str, "\n");
@@ -93,6 +107,25 @@ int yywrap(void) {
 	return 1;
 }
 char *getyytext() { return yytext; }
+
+bool can_delimit(char *s)
+{
+	int i, delimiter[] = {
+		STRING,     // Literals
+		INTEGER,
+		NUMBER,
+		IDENTIFIER, // Identifiers
+		')',        // Special characters
+		'!',
+	};
+
+	for (i = 0; i < arrlen(delimiter); i++) {
+		if (tk == delimiter[i]) {
+			return true;
+		}
+	}
+	return false;
+}
 
 int octal(char *s)
 {

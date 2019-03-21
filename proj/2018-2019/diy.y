@@ -8,6 +8,7 @@
 extern int yylex();
 extern void* yyin;
 int yyerror(char *s);
+int tk;
 
 char *infile = "<<stdin>>";
 int errors;
@@ -24,7 +25,7 @@ int errors;
 	double d;  /* number */
 };
 
-%token <i> INT
+%token <i> INTEGER
 %token <str> STRING IDENTIFIER
 %token <d> NUMBER
 
@@ -52,7 +53,6 @@ int yyerror(char *s)
 
 int main(int argc, char *argv[]) {
 	extern YYSTYPE yylval;
-	int tk;
 	yyin = fopen(argv[1], "r");
 	while ((tk = yylex())) {
 		if (tk > YYERRCODE) {
