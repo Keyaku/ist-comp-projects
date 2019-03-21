@@ -57,7 +57,7 @@ continue          return CONTINUE;
 [-+*/%<>!|&~]     return *yytext;
 [#{}()\[\];,]     return *yytext;
 
-[a-zA-Z_\b]\w* yylval.str = strdup(yytext); return IDENTIFIER;
+[a-zA-Z][a-zA-Z0-9_]*    yylval.str = strdup(yytext); return IDENTIFIER;
 
 0                 yylval.i = 0; return INT;
 [1-9]\d*          { errno = 0; yylval.i = strtol(yytext, NULL, 10);
