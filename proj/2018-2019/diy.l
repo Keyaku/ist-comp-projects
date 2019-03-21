@@ -133,9 +133,14 @@ int octal(char *s)
 
 	for (idx = 0; idx < len; idx++) {
 		if (s[idx] < '0' || s[idx] > '9') { break; }
-		if (s[idx] == '9') { c = 11; }
-		else { c = s[idx] - '0'; }
-		b = b * 8 + c;
+		c = s[idx] - '0';
+		if (c > 7) {
+			c -= 8;
+			b = (b+1) * 8 + c;
+		} else {
+			b = b * 8 + c;
+		}
+
 		if (b < a) {
 			yyerror("octal overflow");
 			break;
