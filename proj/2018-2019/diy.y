@@ -6,7 +6,15 @@
 #include "node.h"
 #include "tabid.h"
 extern int yylex();
-void yyerror(char *s);
+int yyerror(char *s);
+
+char *infile = "<<stdin>>";
+int errors;
+
+#ifndef YYERRCODE
+#define YYERRCODE 256
+#endif
+
 %}
 
 %union {
@@ -28,14 +36,26 @@ void yyerror(char *s);
 
 %%
 
-file	:
-	;
+start:;
 
 %%
 
-char **yynames =
-#if YYDEBUG > 0
-		(char**)yyname;
-#else
-		0;
-#endif
+int yyerror(char *s)
+{
+	extern int yylineno;
+	extern char *getyytext();
+	fprintf(stderr, "%s: %s at or before '%s' in line %d\n", infile, s, getyytext(), yylineno);
+	errors++;
+	return 1;
+}
+
+int main(int argc, char *argv[]) {
+	extern YYSTYPE yylval;
+	int tk;
+	while ((tk = yylex()))
+		if (tk > YYERRCODE)
+			printf("%d:\t%s\n", tk, yyname[tk]);
+		else
+			printf("%d:\t%c\n", tk, tk);
+	return 0;
+}

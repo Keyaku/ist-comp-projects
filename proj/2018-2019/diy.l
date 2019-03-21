@@ -8,7 +8,7 @@
 #include "node.h"
 #include "y.tab.h"
 
-void yyerror(const char *s);
+int yyerror(const char *s);
 int octal(char *s);
 
 %}
