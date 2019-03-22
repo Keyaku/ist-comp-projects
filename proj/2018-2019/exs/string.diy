@@ -10,10 +10,17 @@ Returns 0 if they're the same; -1 or +1 if they're different.
 public integer strcmp(const string str1, const string str2) {
 	integer i = 0
 	for c in str1 upto c <> 0 step i++ do {
-		if c < str2[i] then strcmp := -1;
-		if c > str2[i] then strcmp := +1;
+		if c < str2[i] then {
+			strcmp := -1
+			break;
+		} else if c > str2[i] then {
+			strcmp := +1
+			break;
+		} else if c = str2[i] then {
+			strcmp := 0
+			break;
+		}
 	}
-	strcmp := 0
 }
 
 =< strcpy(dst, src)
