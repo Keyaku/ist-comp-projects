@@ -84,7 +84,7 @@ continue          return CONTINUE;
 					if (errno == ERANGE) yyerror("floating-point overflow");
 					return INTEGER; }
 
-\"[^*"][^\\]*\"   yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
+\"[^"][^\\]*\"    yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
 
 \"                yy_push_state(STR);
 <STR>\"           yy_pop_state(); return STRING;
