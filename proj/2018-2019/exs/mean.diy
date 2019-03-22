@@ -1,0 +1,20 @@
+public void printd(number d)
+
+public integer rand()
+public void srand(integer n)
+
+public integer entry (integer argc, string *argv, string *envp) {
+	number v := 0
+
+	for arg in argv upto arg <> 0 do {
+		srand(arg)
+		v := v + rand()
+	}
+
+	if argc > 1 then v := v / (argc - 1)
+
+	printd(v)
+	println()
+
+	entry := 0
+};
