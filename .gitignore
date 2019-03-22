@@ -5,6 +5,7 @@
 # Project files
 *.zip
 *.code-workspace
+core
 
 # Lex-files
 *lex.yy.c
