@@ -3,6 +3,7 @@
 *Thumbs.db
 
 # Project files
+*.zip
 *.code-workspace
 
 # Lex-files
