@@ -53,7 +53,9 @@ int yyerror(char *s)
 
 int main(int argc, char *argv[]) {
 	extern YYSTYPE yylval;
-	yyin = fopen(argv[1], "r");
+	if (argc > 1) {
+		yyin = fopen(argv[1], "r");
+	}
 	while ((tk = yylex())) {
 		if (tk > YYERRCODE) {
 			printf("%d:\t%s\n", tk, yyname[tk]);
