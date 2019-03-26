@@ -70,7 +70,7 @@ continue          return CONTINUE;
 [-+*/%<>!|&~]     return *yytext;
 [#{}()\[\];,]     return *yytext;
 
-{ID}*             yylval.str = strdup(yytext); return IDENTIFIER;
+{ID}*             yylval.s = strdup(yytext); return IDENTIFIER;
 
 0                 yylval.i = 0; return INTEGER;
 [1-9]\d*          { errno = 0; yylval.i = strtol(yytext, NULL, 10);
@@ -84,20 +84,20 @@ continue          return CONTINUE;
 					if (errno == ERANGE) yyerror("floating-point overflow");
 					return INTEGER; }
 
-\"([^"\\]|\\(.|\n))*\" yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
+\"([^"\\]|\\(.|\n))*\" yylval.s = malloc(yyleng); *yylval.s = 0; REJECT;
 
 \"                yy_push_state(STR);
 <STR>\"           yy_pop_state(); return STRING;
-<STR>"\""         strcat(yylval.str, "\"");
-<STR>"\n"         strcat(yylval.str, "\n");
-<STR>"\r"         strcat(yylval.str, "\r");
-<STR>"\t"         strcat(yylval.str, "\t");
+<STR>"\""         strcat(yylval.s, "\"");
+<STR>"\n"         strcat(yylval.s, "\n");
+<STR>"\r"         strcat(yylval.s, "\r");
+<STR>"\t"         strcat(yylval.s, "\t");
 <STR>"\0"         yyerror("NULL character in string");
 <STR>"\."         yyerror("invalid escape sequence in string");
-<STR>[^"]         strcat(yylval.str, yytext);
+<STR>[^"]         strcat(yylval.s, yytext);
 <STR>.            ;
 <STR>\\{HEX}{HEX}? { char c = (char) strtol(yytext+1, NULL, 16);
-					strncat(yylval.str, &c, 1); }
+					strncat(yylval.s, &c, 1); }
 
 .                 yyerror("Unknown character");
 

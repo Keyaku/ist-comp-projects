@@ -21,12 +21,12 @@ int errors;
 
 %union {
 	long i;    /* 4-byte integer value */
-	char *str; /* string */
+	char *s; /* string */
 	double d;  /* number */
 };
 
 %token <i> INTEGER
-%token <str> STRING IDENTIFIER
+%token <s> STRING IDENTIFIER
 %token <d> NUMBER
 
 %token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
