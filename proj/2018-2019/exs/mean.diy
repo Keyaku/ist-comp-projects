@@ -1,19 +1,26 @@
 public void printd(number d)
+public void prints(string s)
+public void println()
+public integer readi()
 
 public integer rand()
 public void srand(integer n)
 
 public integer entry (integer argc, string *argv, string *envp) {
-	number v := 0
+	integer cnt
+	integer i
+	number sum
 
-	for arg in argv upto arg <> 0 do {
-		srand(arg)
-		v := v + rand()
-	}
+	prints("Número de valores pseudo-aleatórios a gerar: ")
+	cnt := readi()
+	i := 0
+	sum := 0
+	if cnt > 0 then
+		do
+			sum := sum + rand()
+		while ++i < cnt
 
-	if argc > 1 then v := v / (argc - 1)
-
-	printd(v)
+	printd(sum / cnt)
 	println()
 
 	entry := 0

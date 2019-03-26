@@ -1,4 +1,4 @@
 public number factorial(integer N) {
-	if N = 0 then factorial := 1
+	if N < 2 then factorial := 1
 	factorial := N * factorial(N - 1)
 }

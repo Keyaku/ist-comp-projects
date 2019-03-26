@@ -1,14 +1,9 @@
-== Prototypes ==
-public integer strcmp(const string str1, const string str2);
-public string  strcpy(string dst, const string src);
-public integer strchr(const string str, integer char);
-
 =< strcmp(str1, str2)
 Compares two strings.
 Returns 0 if they're the same; -1 or +1 if they're different.
 =>
 public integer strcmp(const string str1, const string str2) {
-	integer i = 0
+	integer i := 0
 	for c in str1 upto c <> 0 step i++ do {
 		if c < str2[i] then {
 			strcmp := -1
@@ -27,7 +22,7 @@ public integer strcmp(const string str1, const string str2) {
 Copies a string from one source to a destination string.
 =>
 public string strcpy(string dst, const string src) {
-	integer i = 0
+	integer i := 0
 	for c in src upto c <> 0 step i++ do {
 		dst[i] := c
 	}
@@ -38,7 +33,7 @@ public string strcpy(string dst, const string src) {
 Returns the index of the first occurrence of a given character in a given string.
 =>
 public string strchr(const string str, integer char) {
-	integer i = 0
+	integer i := 0
 	for c in str upto c <> 0 step i++ do {
 		if c = char then break;
 	}

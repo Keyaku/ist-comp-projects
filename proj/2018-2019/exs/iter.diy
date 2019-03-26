@@ -1,7 +1,6 @@
 public number factorial(integer N) {
-	integer product := 1;
+	factorial := 1;
 	for i in 1 upto N do {
-		product := product * i;
+		factorial := factorial * i;
 	}
-	factorial := product;
 }

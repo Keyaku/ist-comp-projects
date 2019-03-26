@@ -1,11 +1,14 @@
 public void printd(number d)
+public void printi(number i)
+public void prints(string s)
+public void println()
 public number factorial(integer N)
 
 public integer entry (integer argc, string *argv, string *envp) {
-	if argc > 1 then {
+	if argc > 1 then
 		integer num = atoi(argv[1])
-		printd(factorial(num))
-	}
+
+	printi(n); prints("! = "); printd(factorial(n)); println()
 
 	entry := 0
 };
