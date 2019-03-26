@@ -84,16 +84,19 @@ continue          return CONTINUE;
 					if (errno == ERANGE) yyerror("floating-point overflow");
 					return INTEGER; }
 
-\"[^"][^\\]*\"    yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
+\"([^"\\]|\\(.|\n))*\" yylval.str = malloc(yyleng); *yylval.str = 0; REJECT;
 
 \"                yy_push_state(STR);
 <STR>\"           yy_pop_state(); return STRING;
+<STR>"\""         strcat(yylval.str, "\"");
 <STR>"\n"         strcat(yylval.str, "\n");
 <STR>"\r"         strcat(yylval.str, "\r");
 <STR>"\t"         strcat(yylval.str, "\t");
 <STR>"\0"         yyerror("NULL character in string");
-<STR>.|\n         strcat(yylval.str, yytext);
-<STR>\\{HEX}?{HEX} { char c = (char) strtol(yytext+1, NULL, 16);
+<STR>"\."         yyerror("invalid escape sequence in string");
+<STR>[^"]         strcat(yylval.str, yytext);
+<STR>.            ;
+<STR>\\{HEX}{HEX}? { char c = (char) strtol(yytext+1, NULL, 16);
 					strncat(yylval.str, &c, 1); }
 
 .                 yyerror("Unknown character");
