@@ -21,7 +21,7 @@ int errors;
 
 %union {
 	long i;    /* 4-byte integer value */
-	char *s; /* string */
+	char *s;   /* string */
 	double d;  /* number */
 };
 
