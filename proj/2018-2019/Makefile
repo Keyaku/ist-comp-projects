@@ -1,4 +1,5 @@
-LANG=diy
+SRCDIR=src
+LANG=$(SRCDIR)/diy
 EXT=diy # file extension: .$(EXT)
 LIB=lib # compiler library directory
 UTIL=util # compiler library: lib$(LIB).a
