@@ -3,8 +3,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+
 #include "node.h"
 #include "tabid.h"
+
 extern int yylex();
 extern void* yyin;
 int yyerror(char *s);
@@ -21,13 +23,13 @@ int errors;
 
 %union {
 	long i;    /* 4-byte integer value */
-	char *s;   /* string */
 	double d;  /* number */
+	char *s;   /* string */
 };
 
 %token <i> INTEGER
-%token <s> STRING IDENTIFIER
 %token <d> NUMBER
+%token <s> STRING IDENTIFIER
 
 %token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
 %token PUBLIC CONST
