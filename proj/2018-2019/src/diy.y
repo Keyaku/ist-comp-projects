@@ -122,7 +122,7 @@ cont: CONTINUE                      {}
 	;
 
 else: ELSE instr                    {}
-	|   { ; }
+	;
 
 instr: IF expr THEN instr else      {}
 	| DO instr WHILE expr ';'       {}
