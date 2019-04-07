@@ -147,11 +147,8 @@ int yyerror(char *s)
 	return 1;
 }
 
-int main(int argc, char *argv[]) {
-	extern YYSTYPE yylval;
-	if (argc > 1) {
-		yyin = fopen(argv[1], "r");
-	}
+void lexer() {
+	/* Outputting lexer content */
 	while ((tk = yylex())) {
 		if (tk > YYERRCODE) {
 			printf("%d:\t%s\n", tk, yyname[tk]);
@@ -159,5 +156,22 @@ int main(int argc, char *argv[]) {
 			printf("%d:\t%c\n", tk, tk);
 		}
 	}
+}
+
+typedef enum project_mode { LEXER = 0, COMPILER, ASSEMBLY } Mode;
+void (*fn[])() = { lexer };
+
+int main(int argc, char *argv[]) {
+	extern YYSTYPE yylval;
+	Mode mode = LEXER;
+
+	/* Opening file from input or from given argument */
+	if (argc > 1) {
+		yyin = fopen(argv[1], "r");
+	}
+
+	/* Executing the appropriate code for this part */
+	fn[mode]();
+
 	return 0;
 }
