@@ -27,20 +27,114 @@ int errors;
 	char *s;   /* string */
 };
 
-%token <i> INTEGER
-%token <d> NUMBER
-%token <s> STRING IDENTIFIER
+%0 <i> INTEGER
+%0 <d> NUMBER
+%0 <s> STRING IDENTIFIER
 
-%token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
-%token PUBLIC CONST
-%token IF THEN ELSE
-%token WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
+%0 TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
+%0 PUBLIC CONST
+%0 IF THEN ELSE
+%0 WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
 
-%token LE GE EQ NE INC DEC ASSIGN
+%0 LE GE EQ NE INC DEC ASSIGN
+
+%2 UMINUS
+%< LE GE EQ NE
+%< '+' '-'
+%< '*' '/' '%'
+%> ASSIGN
+
+%type<i> expr
 
 %%
 
-start:;
+file: decl;
+
+decl: ';'                                 { ; }
+	| publ cons type atr IDENTIFIER       {}
+	| publ cons type atr IDENTIFIER init  {}
+	;
+
+publ: PUBLIC                        {}
+	| { ; }
+	;
+
+cons: CONST                         {}
+	| { ; }
+	;
+
+atr: '*'                            {}
+	| { ; }
+	;
+
+type: TYPE_VOID                     {}
+	| TYPE_INT                      {}
+	| TYPE_NUM                      {}
+	| TYPE_STR                      {}
+	;
+
+init: ASSIGN INTEGER                {}
+	| ASSIGN NUMBER                 {}
+	| ASSIGN cons STRING            {}
+	| ASSIGN IDENTIFIER             {}
+	| '(' params ')'                {}
+	| '(' params ')' body           {}
+	;
+
+params: param                       {}
+	|   param ',' params            {}
+	;
+
+param: type atr IDENTIFIER          {}
+	;
+
+body: '{' param ';' '}'             {}
+	| '{' param ';' instr '}'       {}
+	;
+
+expr: INTEGER                       { $$ = $1; }
+	| NUMBER                        { $$ = $1; }
+	| expr '+' expr                 { $$ = $1 + $3; }
+	| expr '-' expr                 { $$ = $1 - $3; }
+	| expr '*' expr                 { $$ = $1 * $3; }
+	| expr '/' expr                 { $$ = $1 / $3; }
+	| expr '%' expr                 { $$ = $1 % $3; }
+	| expr LE expr                  { $$ = ($1 <= $3); }
+	| expr GE expr                  { $$ = ($1 >= $3); }
+	| expr EQ expr                  { $$ = ($1 == $3); }
+	| expr NE expr                  { $$ = ($1 != $3); }
+	;
+
+atto: UPTO                          {}
+	| DOWNTO                        {}
+	;
+
+step: STEP expr                     {}
+	| { ; }
+	;
+
+break: BREAK                        {}
+	|  BREAK INTEGER                {}
+	;
+
+cont: CONTINUE                      {}
+	| CONTINUE INTEGER              {}
+	;
+
+else: ELSE instr                    {}
+	|   { ; }
+
+instr: IF expr THEN instr else      {}
+	| DO instr WHILE expr ';'       {}
+	| FOR lval IN expr atto expr step DO instr {}
+	| expr ';'                      {}
+	| body                          {}
+	| break                         {}
+	| cont                          {}
+	| lval '#' expr                 {}
+	;
+
+lval: IDENTIFIER                    {}
 
 %%
 
