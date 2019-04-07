@@ -7,7 +7,7 @@
 #include "node.h"
 #include "tabid.h"
 
-extern int yylex();
+extern int yylex(), yyparse(void);
 extern void* yyin;
 int yyerror(char *s);
 int tk;
@@ -147,7 +147,7 @@ int yyerror(char *s)
 	return 1;
 }
 
-void lexer() {
+int lexer() {
 	/* Outputting lexer content */
 	while ((tk = yylex())) {
 		if (tk > YYERRCODE) {
@@ -156,22 +156,36 @@ void lexer() {
 			printf("%d:\t%c\n", tk, tk);
 		}
 	}
+
+	return 0;
+}
+
+int compiler() {
+	if (yyparse() != 0 || errors > 0) {
+		fprintf(stderr, "%d errors in %s\n", errors, infile);
+		return 1;
+	}
+
+	return 0;
 }
 
 typedef enum project_mode { LEXER = 0, COMPILER, ASSEMBLY } Mode;
-void (*fn[])() = { lexer };
+int (*fn[])() = { lexer, compiler };
 
 int main(int argc, char *argv[]) {
 	extern YYSTYPE yylval;
-	Mode mode = LEXER;
+	Mode mode = COMPILER;
+#ifdef YYDEBUG
+	extern int yydebug;
+	yydebug = getenv("YYDEBUG") ? 1 : 0;
+#endif
 
 	/* Opening file from input or from given argument */
 	if (argc > 1) {
-		yyin = fopen(argv[1], "r");
+		infile = argv[1];
+		yyin = fopen(infile, "r");
 	}
 
 	/* Executing the appropriate code for this part */
-	fn[mode]();
-
-	return 0;
+	return fn[mode]();
 }
