@@ -38,11 +38,16 @@ int errors;
 
 %0 LE GE EQ NE INC DEC ASSIGN
 
-%2 UMINUS
-%< LE GE EQ NE
+
+%< '<' '>' LE GE EQ NE
 %< '+' '-'
 %< '*' '/' '%'
+%2 '~'
+%< '|'
+%< '&'
 %> ASSIGN
+%2 '(' ')' '[' ']'
+%2 PTR ADDR '!' UMINUS INC DEC
 
 %type<i> expr
 
