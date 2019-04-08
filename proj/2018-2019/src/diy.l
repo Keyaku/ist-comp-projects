@@ -23,7 +23,7 @@ int octal(char *s);
 
 %}
 
-%x COM STR
+%x COM CHR
 
 HEX [0-9a-fA-F]
 ID [a-zA-Z][a-zA-Z0-9_]
@@ -32,7 +32,7 @@ ID [a-zA-Z][a-zA-Z0-9_]
 
 [ \t\r]+          ;
 
-\n                if (can_delimit(yytext)) { return ';'; }
+[\n]+             if (can_delimit(yytext)) { return ';'; }
 
 "=<"              yy_push_state(COM);
 <COM>.|\n         ;
@@ -86,17 +86,17 @@ continue          return CONTINUE;
 
 \"([^"\\]|\\(.|\n))*\" yylval.s = malloc(yyleng); *yylval.s = 0; REJECT;
 
-\"                yy_push_state(STR);
-<STR>\"           yy_pop_state(); return STRING;
-<STR>"\""         strcat(yylval.s, "\"");
-<STR>"\n"         strcat(yylval.s, "\n");
-<STR>"\r"         strcat(yylval.s, "\r");
-<STR>"\t"         strcat(yylval.s, "\t");
-<STR>"\0"         yyerror("NULL character in string");
-<STR>"\."         yyerror("invalid escape sequence in string");
-<STR>[^"]         strcat(yylval.s, yytext);
-<STR>.            ;
-<STR>\\{HEX}{HEX}? { char c = (char) strtol(yytext+1, NULL, 16);
+\"                yy_push_state(CHR);
+<CHR>\"           yy_pop_state(); return STRING;
+<CHR>"\""         strcat(yylval.s, "\"");
+<CHR>"\n"         strcat(yylval.s, "\n");
+<CHR>"\r"         strcat(yylval.s, "\r");
+<CHR>"\t"         strcat(yylval.s, "\t");
+<CHR>"\0"         yyerror("NULL character in string");
+<CHR>"\."         yyerror("invalid escape sequence in string");
+<CHR>[^"]         strcat(yylval.s, yytext);
+<CHR>.            ;
+<CHR>\\{HEX}{HEX}? { char c = (char) strtol(yytext+1, NULL, 16);
 					strncat(yylval.s, &c, 1); }
 
 .                 yyerror("Unknown character");
@@ -106,7 +106,7 @@ continue          return CONTINUE;
 /* Code */
 int yywrap(void) {
 	if (YYSTATE == COM) yyerror("unterminated comment");
-	if (YYSTATE == STR) yyerror("unterminated string");
+	if (YYSTATE == CHR) yyerror("unterminated string");
 	return 1;
 }
 char *getyytext() { return yytext; }

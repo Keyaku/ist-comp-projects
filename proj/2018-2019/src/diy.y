@@ -72,10 +72,7 @@ atr: '*'                            {}
 	| { ; }
 	;
 
-type: TYPE_VOID                     {}
-	| TYPE_INT                      {}
-	| TYPE_NUM                      {}
-	| TYPE_STR                      {}
+type: TYPE_VOID| TYPE_INT | TYPE_NUM | TYPE_STR
 	;
 
 init: ASSIGN INTEGER                {}
