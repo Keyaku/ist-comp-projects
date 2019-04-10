@@ -1,4 +1,5 @@
-public number factorial(integer N) {
-	if N < 2 then factorial := 1
-	factorial := N * factorial(N - 1)
-}
+== Computacao de factoriais de forma recursiva
+public number factorial (integer n) {
+	if n < 2 then factorial := 1
+	else factorial := n * factorial(n-1)
+};

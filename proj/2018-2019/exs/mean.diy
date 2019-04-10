@@ -1,10 +1,10 @@
-public void printd(number d)
 public void prints(string s)
+public void printd(number d)
 public void println()
 public integer readi()
 
+public void srand(integer s)
 public integer rand()
-public void srand(integer n)
 
 public integer entry (integer argc, string *argv, string *envp) {
 	integer cnt
@@ -19,9 +19,7 @@ public integer entry (integer argc, string *argv, string *envp) {
 		do
 			sum := sum + rand()
 		while ++i < cnt
-
 	printd(sum / cnt)
 	println()
-
 	entry := 0
 };
