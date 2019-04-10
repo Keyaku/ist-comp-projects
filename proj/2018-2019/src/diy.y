@@ -38,38 +38,42 @@ int errors;
 
 %0 LE GE EQ NE INC DEC ASSIGN
 
-
+%2 IFX
+%2 ELSE
+%> ASSIGN
 %< '<' '>' LE GE EQ NE
 %< '+' '-'
 %< '*' '/' '%'
 %2 '~'
 %< '|'
 %< '&'
-%> ASSIGN
 %2 '(' ')' '[' ']'
 %2 PTR ADDR '!' UMINUS INC DEC
 
-%type<i> expr
+%type<i> lval rval
 
 %%
 
 file: decl;
-
-decl: ';'                                 { ; }
-	| publ cons type atr IDENTIFIER       {}
-	| publ cons type atr IDENTIFIER init  {}
+decl:
+	| decl def
 	;
 
-publ: PUBLIC                        {}
-	| { ; }
+def: ';'
+	| publ cons type atr lval       {}
+	| publ cons type atr lval init  {}
 	;
 
-cons: CONST                         {}
-	| { ; }
+publ:
+	| PUBLIC                        {}
 	;
 
-atr: '*'                            {}
-	| { ; }
+cons:
+	| CONST                         {}
+	;
+
+atr:
+	| '*'                           {}
 	;
 
 type: TYPE_VOID| TYPE_INT | TYPE_NUM | TYPE_STR
@@ -94,25 +98,27 @@ body: '{' param ';' '}'             {}
 	| '{' param ';' instr '}'       {}
 	;
 
-expr: INTEGER                       { $$ = $1; }
-	| NUMBER                        { $$ = $1; }
-	| expr '+' expr                 { $$ = $1 + $3; }
-	| expr '-' expr                 { $$ = $1 - $3; }
-	| expr '*' expr                 { $$ = $1 * $3; }
-	| expr '/' expr                 { $$ = $1 / $3; }
-	| expr '%' expr                 { $$ = $1 % $3; }
-	| expr LE expr                  { $$ = ($1 <= $3); }
-	| expr GE expr                  { $$ = ($1 >= $3); }
-	| expr EQ expr                  { $$ = ($1 == $3); }
-	| expr NE expr                  { $$ = ($1 != $3); }
+lval: IDENTIFIER                    {}
+	;
+
+rval: lval                       { $$ = $1; }
+	| rval '+' rval              { $$ = $1 + $3; }
+	| rval '-' rval              { $$ = $1 - $3; }
+	| rval '*' rval              { $$ = $1 * $3; }
+	| rval '/' rval              { $$ = $1 / $3; }
+	| rval '%' rval              { $$ = $1 % $3; }
+	| rval LE rval               { $$ = ($1 <= $3); }
+	| rval GE rval               { $$ = ($1 >= $3); }
+	| rval EQ rval               { $$ = ($1 == $3); }
+	| rval NE rval               { $$ = ($1 != $3); }
 	;
 
 atto: UPTO                          {}
 	| DOWNTO                        {}
 	;
 
-step: STEP expr                     {}
-	| { ; }
+step:
+	| STEP rval                     {}
 	;
 
 break: BREAK                        {}
@@ -123,20 +129,16 @@ cont: CONTINUE                      {}
 	| CONTINUE INTEGER              {}
 	;
 
-else: ELSE instr                    {}
-	;
-
-instr: IF expr THEN instr else      {}
-	| DO instr WHILE expr ';'       {}
-	| FOR lval IN expr atto expr step DO instr {}
-	| expr ';'                      {}
+instr: IF rval THEN instr %prec IFX {}
+	| IF rval THEN instr ELSE instr {}
+	| DO instr WHILE rval ';'       {}
+	| FOR lval IN rval atto rval step DO instr {}
+	| rval ';'                      {}
 	| body                          {}
 	| break                         {}
 	| cont                          {}
-	| lval '#' expr                 {}
+	| lval '#' rval                 {}
 	;
-
-lval: IDENTIFIER                    {}
 
 %%
 
@@ -163,12 +165,14 @@ int lexer() {
 }
 
 int compiler() {
+	int retval = 0;
+
 	if (yyparse() != 0 || errors > 0) {
 		fprintf(stderr, "%d errors in %s\n", errors, infile);
-		return 1;
+		retval = 1;
 	}
 
-	return 0;
+	return retval;
 }
 
 typedef enum project_mode { LEXER = 0, COMPILER, ASSEMBLY } Mode;
