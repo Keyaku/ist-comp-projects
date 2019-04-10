@@ -25,6 +25,7 @@ int errors;
 	long i;    /* 4-byte integer value */
 	double d;  /* number */
 	char *s;   /* string */
+	Node *n;   /* abstract Node type */
 };
 
 %0 <i> INTEGER
@@ -36,12 +37,12 @@ int errors;
 %0 IF THEN ELSE
 %0 WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
 
-%0 LE GE EQ NE INC DEC ASSIGN
+%0 LE GE NE INC DEC ASSIGN
 
 %2 IFX
 %2 ELSE
 %> ASSIGN
-%< '<' '>' LE GE EQ NE
+%< '<' '>' '=' LE GE NE
 %< '+' '-'
 %< '*' '/' '%'
 %2 '~'
@@ -50,94 +51,115 @@ int errors;
 %2 '(' ')' '[' ']'
 %2 PTR ADDR '!' UMINUS INC DEC
 
-%type<i> lval rval
-
 %%
 
 file: decl;
-decl:
-	| decl def
+decl:| decl def
 	;
 
-def: ';'
-	| publ cons type atr lval       {}
-	| publ cons type atr lval init  {}
+def: publ cons type star ident init ';'    {}
 	;
 
-publ:
-	| PUBLIC                        {}
+publ:| PUBLIC                        {}
 	;
 
-cons:
-	| CONST                         {}
+cons:| CONST                         {}
 	;
 
-atr:
-	| '*'                           {}
+type: TYPE_VOID | TYPE_INT | TYPE_NUM | TYPE_STR
 	;
 
-type: TYPE_VOID| TYPE_INT | TYPE_NUM | TYPE_STR
+star:| '*'
 	;
 
-init: ASSIGN INTEGER                {}
-	| ASSIGN NUMBER                 {}
-	| ASSIGN cons STRING            {}
-	| ASSIGN IDENTIFIER             {}
-	| '(' params ')'                {}
-	| '(' params ')' body           {}
+ident: IDENTIFIER
 	;
 
-params: param                       {}
-	|   param ',' params            {}
+init: ASSIGN cte
+	| ASSIGN ident
+	|'(' initparams ')' initbody
 	;
 
-param: type atr IDENTIFIER          {}
+param: type star ident
 	;
 
-body: '{' param ';' '}'             {}
-	| '{' param ';' instr '}'       {}
+params: param
+	| params ',' param
 	;
 
-lval: IDENTIFIER                    {}
+initparams:| params
+	;
+initbody:| body;
+
+bparam:| bparam param ';'
 	;
 
-rval: lval                       { $$ = $1; }
-	| rval '+' rval              { $$ = $1 + $3; }
-	| rval '-' rval              { $$ = $1 - $3; }
-	| rval '*' rval              { $$ = $1 * $3; }
-	| rval '/' rval              { $$ = $1 / $3; }
-	| rval '%' rval              { $$ = $1 % $3; }
-	| rval LE rval               { $$ = ($1 <= $3); }
-	| rval GE rval               { $$ = ($1 >= $3); }
-	| rval EQ rval               { $$ = ($1 == $3); }
-	| rval NE rval               { $$ = ($1 != $3); }
+iparam:| iparam instr
 	;
 
-atto: UPTO                          {}
-	| DOWNTO                        {}
+cte: INTEGER
+	| cons STRING
+	| NUMBER
 	;
 
-step:
-	| STEP rval                     {}
+body: '{' bparam iparam '}'
 	;
 
-break: BREAK                        {}
-	|  BREAK INTEGER                {}
+atto: UPTO | DOWNTO
 	;
 
-cont: CONTINUE                      {}
-	| CONTINUE INTEGER              {}
+step:| STEP rval
+	;
+integer:| INTEGER
 	;
 
-instr: IF rval THEN instr %prec IFX {}
-	| IF rval THEN instr ELSE instr {}
-	| DO instr WHILE rval ';'       {}
-	| FOR lval IN rval atto rval step DO instr {}
-	| rval ';'                      {}
-	| body                          {}
-	| break                         {}
-	| cont                          {}
-	| lval '#' rval                 {}
+instr: IF rval THEN instr %prec IFX
+	| IF rval THEN instr ELSE instr
+	| DO instr WHILE rval ';'
+	| FOR lval IN rval atto rval step DO instr
+	| rval ';'
+	| body
+	| BREAK integer ';'
+	| CONTINUE integer ';'
+	| lval '#' rval ';'
+	;
+
+lval: ident
+	| lval '[' rval ']'
+	| '*' lval %prec '*'
+	;
+
+rval: lval,
+	| '(' rval ')'
+	| cte
+	| rval '(' args ')'
+	| rval '(' ')'
+		| '-' rval %prec UMINUS
+		| '!' rval
+	| '&' lval %prec ADDR
+	| '~' rval
+	| lval INC
+	| lval DEC
+	| INC lval
+	| DEC lval
+		| rval '*' rval	 {}
+		| rval '/' rval	 {}
+		| rval '%' rval	 {}
+		| rval '+' rval	 {}
+		| rval '-' rval	 {}
+	| rval '<' rval	     {}
+	| rval '>' rval	     {}
+	| rval GE rval	     {}
+	| rval LE rval	     {}
+	| rval '=' rval	     {}
+	| rval NE rval	     {}
+		| rval '&' rval	 {}
+		| rval '|' rval	 {}
+	| lval ASSIGN rval
+	;
+
+args: rval
+	| args ',' rval
 	;
 
 %%
@@ -165,14 +187,7 @@ int lexer() {
 }
 
 int compiler() {
-	int retval = 0;
-
-	if (yyparse() != 0 || errors > 0) {
-		fprintf(stderr, "%d errors in %s\n", errors, infile);
-		retval = 1;
-	}
-
-	return retval;
+	return yyparse();
 }
 
 typedef enum project_mode { LEXER = 0, COMPILER, ASSEMBLY } Mode;
