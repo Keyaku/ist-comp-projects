@@ -3,6 +3,7 @@
 *Thumbs.db
 
 # Project files
+sol
 *.zip
 *.code-workspace
 *.vscode
