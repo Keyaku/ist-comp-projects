@@ -3,12 +3,12 @@
 #define _TABID_H_
 
 typedef int (*IDfunc)(int,char*,long,long);
-void*   IDroot(void *swap);
+void* IDroot(void *swap);
 
 void IDpop(void),
-     IDpush(void),
-     IDclear(void),
-     IDprint(int,int);
+	IDpush(void),
+	IDclear(void),
+	IDprint(int,int);
 
 int	IDnew(int,char*,long),
 	IDreplace(int,char*,long),
