@@ -263,7 +263,7 @@ static int print(Node *p, FILE *fp, char *tab[], int lev) {
 
 	if (p == 0) return cnt;
 	cnt++;
-	if (p->type == nodeOpr) fprintf(fp,"\n%*s(", 2*lev, " ");
+	if (p->type == nodeOpr) fprintf(fp,"\n%*s(", 4*lev, " ");
 	if (debugNode) fprintf(fp," [%lx]", (long)p);
 	if (tab != 0)
 	  fprintf(fp," %s:", tab[p->attrib]);

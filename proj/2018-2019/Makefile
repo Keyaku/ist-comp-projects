@@ -12,6 +12,8 @@ CFLAGS=-g -DYYDEBUG
 UNAME := $(shell uname -s)
 
 # RULES
+all: $(EXEC)
+
 $(EXEC): $(LANG).y $(LANG).l $(LANG).brg
 	make -C $(LIB)
 	flex -l $(LANG).l
