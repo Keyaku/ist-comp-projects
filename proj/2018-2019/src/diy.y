@@ -9,10 +9,13 @@
 
 extern int yylex(), yyparse(void);
 extern void* yyin;
+extern void* yyout;
 int yyerror(char *s);
 int tk;
 
-char *infile = "<<stdin>>";
+char *infile = "<<stdin>>",
+	*outfile = NULL;
+
 int errors;
 
 #ifndef YYERRCODE
@@ -28,138 +31,190 @@ int errors;
 	Node *n;   /* abstract Node type */
 };
 
-%0 <i> INTEGER
-%0 <d> NUMBER
-%0 <s> STRING IDENTIFIER
+%token <i> INTEGER
+%token <d> NUMBER
+%token <s> STRING IDENTIFIER
 
-%0 TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
-%0 PUBLIC CONST
-%0 IF THEN ELSE
-%0 WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
+%token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
+%token PUBLIC CONST
+%token IF THEN ELSE
+%token WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
 
-%0 LE GE NE INC DEC ASSIGN
+%token LT LE GT GE EQ NE INC DEC ASSIGN BAND BOR
+%token tMUL tDIV tMOD tADD tSUB
 
-%2 IFX
-%2 ELSE
-%> ASSIGN
-%< '<' '>' '=' LE GE NE
-%< '+' '-'
-%< '*' '/' '%'
-%2 '~'
-%< '|'
-%< '&'
-%2 '(' ')' '[' ']'
-%2 PTR ADDR '!' UMINUS INC DEC
+%nonassoc IFX
+%nonassoc ELSE
+%right ASSIGN
+%left '<' '>' '=' LE GE NE
+%left '+' '-'
+%left '*' '/' '%'
+%nonassoc '~' BNOT
+%left '|' BOR
+%left '&' BAND
+%nonassoc '(' ')' '[' ']'
+%nonassoc PTR ADDR '!' NOT UMINUS INC DEC
+
+%token FILE_TOKEN DECLARATION DEFINITION BODY PARAM PARAMS
+%token tBPARAM tIPARAM CTE tBODY tFORTO tUPTO tDOWNTO tSTEP tARGS tSTACK
+
+%token ATTRIBUTES MODIFIERS REFERENCE TYPE INDEX LOAD CALL END
+%token INITIALIZERS INITIALIZATION
+
+%type<n> PUBLIC CONST TYPE ASSIGN
+
+%type<n> decl def
+%type<n> atr mod ref publ cons type star ident init
+%type<n> cte integer instr lval rval args
+%type<n> param params body forto step
+%type<n> initparams initbody bparam iparam
+
 
 %%
 
-file: decl;
-decl:| decl def
+file: decl;                                      { printNode(uniNode(FILE_TOKEN, $1), yyout, (char**)yyname); }
+decl:                                            { $$ = nilNode(END); }
+	| decl def                                   { $$ = uniNode(DECLARATION, $2); }
 	;
 
-def: publ cons type star ident init ';'    {}
+atr: mod ref                                     { $$ = binNode(ATTRIBUTES, $1, $2); }
 	;
 
-publ:| PUBLIC                        {}
+mod: publ cons                                   { $$ = binNode(MODIFIERS, $1, $2); }
 	;
 
-cons:| CONST                         {}
+publ:                                            { $$ = nilNode(END); }
+	| PUBLIC                                     { $$ = nilNode(PUBLIC); }
 	;
 
-type: TYPE_VOID | TYPE_INT | TYPE_NUM | TYPE_STR
+cons:                                            { $$ = nilNode(END); }
+	| CONST                                      { $$ = nilNode(CONST); }
 	;
 
-star:| '*'
+ref: type star                                   { $$ = binNode(REFERENCE, $1, $2); }
 	;
 
-ident: IDENTIFIER
+star:                                            { $$ = nilNode(END); }
+	| '*'                                        { $$ = nilNode('*'); }
 	;
 
-init: ASSIGN cte
-	| ASSIGN ident
-	|'(' initparams ')' initbody
+type: TYPE_VOID                                  { $$ = nilNode(TYPE_VOID); }
+	| TYPE_INT                                   { $$ = nilNode(TYPE_INT); }
+	| TYPE_NUM                                   { $$ = nilNode(TYPE_NUM); }
+	| TYPE_STR                                   { $$ = nilNode(TYPE_STR); }
 	;
 
-param: type star ident
+def: atr ident init ';'                          { $$ = binNode(DEFINITION, $1, binNode(INITIALIZATION, $2, $3)); }
 	;
 
-params: param
-	| params ',' param
+ident: IDENTIFIER                                { $$ = strNode(IDENTIFIER, $1); }
 	;
 
-initparams:| params
-	;
-initbody:| body;
-
-bparam:| bparam param ';'
+init: ASSIGN cte                                 { $$ = binNode(ASSIGN, $1, $2); }
+	| ASSIGN ident                               { $$ = binNode(ASSIGN, $1, $2); }
+	|'(' initparams ')' initbody                 { $$ = binNode(INITIALIZERS, $2, $4); }
 	;
 
-iparam:| iparam instr
+param: ref ident                                 { $$ = binNode(PARAM, $1, $2); }
 	;
 
-cte: INTEGER
-	| cons STRING
-	| NUMBER
+params: param                                    { $$ = $1; }
+	| params ',' param                           { $$ = addNode($1, $3, -1); }
 	;
 
-body: '{' bparam iparam '}'
+initparams:                                      { $$ = nilNode(END); }
+	| params                                     { $$ = uniNode(PARAMS, $1); }
+	;
+initbody:                                        { $$ = nilNode(END); }
+	| body                                       { $$ = uniNode(BODY, $1); }
 	;
 
-atto: UPTO | DOWNTO
+bparam:                                          { $$ = nilNode(END); }
+	| bparam param ';'                           { $$ = binNode(tBPARAM, $1, $2); }
 	;
 
-step:| STEP rval
-	;
-integer:| INTEGER
-	;
-
-instr: IF rval THEN instr %prec IFX
-	| IF rval THEN instr ELSE instr
-	| DO instr WHILE rval ';'
-	| FOR lval IN rval atto rval step DO instr
-	| rval ';'
-	| body
-	| BREAK integer ';'
-	| CONTINUE integer ';'
-	| lval '#' rval ';'
+iparam:                                          { $$ = nilNode(END); }
+	| iparam instr                               { $$ = binNode(tIPARAM, $1, $2); }
 	;
 
-lval: ident
-	| lval '[' rval ']'
-	| '*' lval %prec '*'
+cte: INTEGER                                     { $$ = intNode(INTEGER, $1); }
+	| cons STRING                                { $$ = binNode(CTE, $1, strNode(STRING, $2)); }
+	| NUMBER                                     { $$ = realNode(NUMBER, $1); }
 	;
 
-rval: lval,
-	| '(' rval ')'
-	| cte
-	| rval '(' args ')'
-	| rval '(' ')'
-		| '-' rval %prec UMINUS
-		| '!' rval
-	| '&' lval %prec ADDR
-	| '~' rval
-	| lval INC
-	| lval DEC
-	| INC lval
-	| DEC lval
-		| rval '*' rval	 {}
-		| rval '/' rval	 {}
-		| rval '%' rval	 {}
-		| rval '+' rval	 {}
-		| rval '-' rval	 {}
-	| rval '<' rval	     {}
-	| rval '>' rval	     {}
-	| rval GE rval	     {}
-	| rval LE rval	     {}
-	| rval '=' rval	     {}
-	| rval NE rval	     {}
-		| rval '&' rval	 {}
-		| rval '|' rval	 {}
-	| lval ASSIGN rval
+body: '{' bparam iparam '}'                      { $$ = binNode(tBODY, $2, $3); }
 	;
 
-args: rval
-	| args ',' rval
+forto: UPTO  rval                                { $$ = uniNode(tUPTO,   $2); }
+	| DOWNTO rval                                { $$ = uniNode(tDOWNTO, $2); }
+	;
+
+step:                                            { $$ = nilNode(END); }
+	| STEP rval                                  { $$ = uniNode(tSTEP, $2); }
+	;
+
+instr: IF rval THEN instr %prec IFX              { $$ = binNode(IF, $2, uniNode(THEN, $4)); }
+	| IF rval THEN instr ELSE instr              { $$ = binNode(IF, $2, binNode(THEN, $4, uniNode(ELSE, $6))); }
+	| DO instr WHILE rval ';'                    { $$ = binNode(DO, $2, uniNode(WHILE, $4)); }
+	| FOR lval IN rval forto step DO instr   {
+		$$ = binNode
+		(FOR, $2, binNode
+			(IN, $4, binNode
+				(tFORTO, $5, binNode
+					(tSTEP, $6, uniNode
+						(DO, $8)
+					)
+				)
+			)
+		);
+	}
+	| rval ';'                                   { $$ = $1; }
+	| body                                       { $$ = $1; }
+	| BREAK integer ';'                          { $$ = uniNode(BREAK, $2); }
+	| CONTINUE integer ';'                       { $$ = uniNode(CONTINUE, $2); }
+	| lval '#' rval ';'                          { $$ = binNode(tSTACK, $1, $3); }
+	;
+
+integer:                                         { $$ = nilNode(END); }
+	| INTEGER                                    { $$ = intNode(INTEGER, $1); }
+	;
+
+lval: ident                                      { $$ = $1; }
+	| lval '[' rval ']'                          { $$ = binNode(INDEX, $1, $3); }
+	| '*' lval %prec '*'                         { $$ = uniNode(LOAD, $2); }
+	;
+
+rval: lval,                                      { $$ = uniNode(LOAD, $1); }
+	| '(' rval ')'                               { $$ = $2; }
+	| cte                                        {}
+	| rval '(' args ')'                          { $$ = binNode(CALL, $1, $3); }
+	| rval '(' ')'                               { $$ = uniNode(CALL, $1); }
+		| '-' rval %prec UMINUS                  { $$ = uniNode(UMINUS, $2); }
+		| '!' rval                               { $$ = uniNode(NOT, $2);  }
+	| '&' lval %prec ADDR                        { $$ = uniNode(PTR, $2);  }
+	| '~' rval                                   { $$ = uniNode(BNOT, $2); }
+	| lval INC                                   { $$ = binNode(INC, $1, intNode(INTEGER, $1->info == 3 ? 4 : 1)); }
+	| lval DEC                                   { $$ = binNode(DEC, $1, intNode(INTEGER, $1->info == 3 ? 4 : 1)); }
+	| INC lval                                   { $$ = binNode(INC, intNode(INTEGER, $2->info == 3 ? 4 : 1), $2); }
+	| DEC lval                                   { $$ = binNode(DEC, intNode(INTEGER, $2->info == 3 ? 4 : 1), $2); }
+		| rval '*' rval	                         { $$ = binNode(tMUL, $1, $3);   }
+		| rval '/' rval	                         { $$ = binNode(tDIV, $1, $3);   }
+		| rval '%' rval	                         { $$ = binNode(tMOD, $1, $3);   }
+		| rval '+' rval	                         { $$ = binNode(tADD, $1, $3);   }
+		| rval '-' rval	                         { $$ = binNode(tSUB, $1, $3);   }
+	| rval '<' rval	                             { $$ = binNode(LT, $1, $3);     }
+	| rval '>' rval	                             { $$ = binNode(GT, $1, $3);     }
+	| rval GE rval	                             { $$ = binNode(GE, $1, $3);     }
+	| rval LE rval	                             { $$ = binNode(LE, $1, $3);     }
+	| rval '=' rval	                             { $$ = binNode(EQ, $1, $3);     }
+	| rval NE rval	                             { $$ = binNode(NE, $1, $3);     }
+		| rval '&' rval	                         { $$ = binNode(BAND, $1, $3);   }
+		| rval '|' rval	                         { $$ = binNode(BOR, $1, $3);    }
+	| lval ASSIGN rval                           { $$ = binNode(ASSIGN, $1, $3); }
+	;
+
+args: rval                                       { $$ = binNode(tARGS, $1, nilNode(END));      }
+	| args ',' rval                              { $$ = binNode(tARGS, $1, $3);  }
 	;
 
 %%
@@ -190,11 +245,12 @@ int compiler() {
 	return yyparse();
 }
 
-typedef enum project_mode { LEXER = 0, COMPILER, ASSEMBLY } Mode;
+typedef enum { LEXER = 0, COMPILER, ASSEMBLY } Mode;
 int (*fn[])() = { lexer, compiler };
 
 int main(int argc, char *argv[]) {
 	extern YYSTYPE yylval;
+	int retval = 0;
 	Mode mode = COMPILER;
 #ifdef YYDEBUG
 	extern int yydebug;
@@ -208,5 +264,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* Executing the appropriate code for this part */
-	return fn[mode]();
+	retval = fn[mode]();
+
+	fclose(yyin);
+	fclose(yyout);
+
+	return retval;
 }
