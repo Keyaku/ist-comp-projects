@@ -22,6 +22,8 @@ int errors;
 #define YYERRCODE 256
 #endif
 
+#define arrlen(x)  (sizeof(x) / sizeof((x)[0]))
+
 %}
 
 %union {
@@ -41,7 +43,7 @@ int errors;
 %token WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
 
 %token LT LE GT GE EQ NE INC DEC ASSIGN BAND BOR
-%token tMUL tDIV tMOD tADD tSUB
+%token MUL DIV MOD ADD SUBT
 
 %nonassoc IFX
 %nonassoc ELSE
@@ -55,26 +57,27 @@ int errors;
 %nonassoc '(' ')' '[' ']'
 %nonassoc PTR ADDR '!' NOT UMINUS INC DEC
 
-%token FILE_TOKEN DECLARATION DEFINITION BODY PARAM PARAMS
-%token tBPARAM tIPARAM CTE tBODY tFORTO tUPTO tDOWNTO tSTEP tARGS tSTACK
+%token FILE_TOKEN DECLARATION DEFINITION INSTRUCTION BODY PARAM PARAMS
+%token BODY_PARAM INSTR_PARAM
+%token CTE FOR_BLOCK FORSTEP FORTO UPTO DOWNTO ARG ARGS tSTACK
 
-%token ATTRIBUTES MODIFIERS REFERENCE TYPE INDEX LOAD CALL END
-%token INITIALIZERS INITIALIZATION
+%token ATTRIBUTES MODIFIERS REFERENCE TYPE INDEX LOAD CALL STOP
+%token PROCEDURE PARAMETERS BLOCK
 
 %type<n> PUBLIC CONST TYPE ASSIGN
 
 %type<n> decl def
 %type<n> atr mod ref publ cons type star ident init
 %type<n> cte integer instr lval rval args
-%type<n> param params body forto step
+%type<n> param params body for forto do step
 %type<n> initparams initbody bparam iparam
 
 
 %%
 
 file: decl;                                      { printNode(uniNode(FILE_TOKEN, $1), yyout, (char**)yyname); }
-decl:                                            { $$ = nilNode(END); }
-	| decl def                                   { $$ = uniNode(DECLARATION, $2); }
+decl:                                            { $$ = nilNode(STOP); }
+	| decl def                                   { $$ = binNode(DECLARATION, $1, $2); }
 	;
 
 atr: mod ref                                     { $$ = binNode(ATTRIBUTES, $1, $2); }
@@ -83,19 +86,19 @@ atr: mod ref                                     { $$ = binNode(ATTRIBUTES, $1, 
 mod: publ cons                                   { $$ = binNode(MODIFIERS, $1, $2); }
 	;
 
-publ:                                            { $$ = nilNode(END); }
+publ:                                            { $$ = nilNode(STOP); }
 	| PUBLIC                                     { $$ = nilNode(PUBLIC); }
 	;
 
-cons:                                            { $$ = nilNode(END); }
+cons:                                            { $$ = nilNode(STOP); }
 	| CONST                                      { $$ = nilNode(CONST); }
 	;
 
 ref: type star                                   { $$ = binNode(REFERENCE, $1, $2); }
 	;
 
-star:                                            { $$ = nilNode(END); }
-	| '*'                                        { $$ = nilNode('*'); }
+star:                                            { $$ = nilNode(STOP); }
+	| '*'                                        { $$ = nilNode(PTR); }
 	;
 
 type: TYPE_VOID                                  { $$ = nilNode(TYPE_VOID); }
@@ -104,7 +107,7 @@ type: TYPE_VOID                                  { $$ = nilNode(TYPE_VOID); }
 	| TYPE_STR                                   { $$ = nilNode(TYPE_STR); }
 	;
 
-def: atr ident init ';'                          { $$ = binNode(DEFINITION, $1, binNode(INITIALIZATION, $2, $3)); }
+def: atr ident init ';'                          { $$ = binNode(DEFINITION, $1, binNode(PROCEDURE, $2, $3)); }
 	;
 
 ident: IDENTIFIER                                { $$ = strNode(IDENTIFIER, $1); }
@@ -112,61 +115,60 @@ ident: IDENTIFIER                                { $$ = strNode(IDENTIFIER, $1);
 
 init: ASSIGN cte                                 { $$ = binNode(ASSIGN, $1, $2); }
 	| ASSIGN ident                               { $$ = binNode(ASSIGN, $1, $2); }
-	|'(' initparams ')' initbody                 { $$ = binNode(INITIALIZERS, $2, $4); }
+	|'(' initparams ')' initbody                 { $$ = binNode(BLOCK, $2, $4); }
 	;
 
 param: ref ident                                 { $$ = binNode(PARAM, $1, $2); }
 	;
 
 params: param                                    { $$ = $1; }
-	| params ',' param                           { $$ = addNode($1, $3, -1); }
+	| params ',' param                           { $$ = binNode(PARAMETERS, $1, $3); }
+	// | params ',' param                           { $$ = addNode($1, $3, 0); }
 	;
 
-initparams:                                      { $$ = nilNode(END); }
-	| params                                     { $$ = uniNode(PARAMS, $1); }
-	;
-initbody:                                        { $$ = nilNode(END); }
-	| body                                       { $$ = uniNode(BODY, $1); }
+initparams:                                      { $$ = nilNode(STOP); }
+	| params                                     { $$ = $1; }
 	;
 
-bparam:                                          { $$ = nilNode(END); }
-	| bparam param ';'                           { $$ = binNode(tBPARAM, $1, $2); }
+initbody:                                        { $$ = nilNode(STOP); }
+	| body                                       { $$ = $1; }
 	;
 
-iparam:                                          { $$ = nilNode(END); }
-	| iparam instr                               { $$ = binNode(tIPARAM, $1, $2); }
+bparam:                                          { $$ = nilNode(STOP); }
+	| bparam param ';'                           { $$ = binNode(DEFINITION, $1, $2); }
+	;
+
+iparam:                                          { $$ = nilNode(STOP); }
+	| iparam instr                               { $$ = binNode(INSTRUCTION, $1, $2); }
 	;
 
 cte: INTEGER                                     { $$ = intNode(INTEGER, $1); }
-	| cons STRING                                { $$ = binNode(CTE, $1, strNode(STRING, $2)); }
+	| cons STRING                                { $$ = binNode(STRING, $1, strNode(STRING, $2)); }
 	| NUMBER                                     { $$ = realNode(NUMBER, $1); }
 	;
 
-body: '{' bparam iparam '}'                      { $$ = binNode(tBODY, $2, $3); }
+body: '{' bparam iparam '}'                      { $$ = binNode(BODY, $2, $3); }
 	;
 
-forto: UPTO  rval                                { $$ = uniNode(tUPTO,   $2); }
-	| DOWNTO rval                                { $$ = uniNode(tDOWNTO, $2); }
+for: FOR lval IN rval                            { $$ = binNode(FOR, $2, uniNode(IN, $4)); }
 	;
 
-step:                                            { $$ = nilNode(END); }
-	| STEP rval                                  { $$ = uniNode(tSTEP, $2); }
+forto: UPTO  rval                                { $$ = uniNode(UPTO,   $2); }
+	| DOWNTO rval                                { $$ = uniNode(DOWNTO, $2); }
+	;
+
+do: DO instr                                     { $$ = uniNode(DO, $2); }
+	;
+
+step:                                            { $$ = nilNode(STOP); }
+	| STEP rval                                  { $$ = uniNode(STEP, $2); }
 	;
 
 instr: IF rval THEN instr %prec IFX              { $$ = binNode(IF, $2, uniNode(THEN, $4)); }
 	| IF rval THEN instr ELSE instr              { $$ = binNode(IF, $2, binNode(THEN, $4, uniNode(ELSE, $6))); }
-	| DO instr WHILE rval ';'                    { $$ = binNode(DO, $2, uniNode(WHILE, $4)); }
-	| FOR lval IN rval forto step DO instr   {
-		$$ = binNode
-		(FOR, $2, binNode
-			(IN, $4, binNode
-				(tFORTO, $5, binNode
-					(tSTEP, $6, uniNode
-						(DO, $8)
-					)
-				)
-			)
-		);
+	| do WHILE rval ';'                          { $$ = binNode(WHILE, $1, $3); }
+	| for forto step do   {
+		$$ = binNode(FOR_BLOCK, $1, binNode(FORTO, $2, binNode(FORSTEP, $3, $4)));
 	}
 	| rval ';'                                   { $$ = $1; }
 	| body                                       { $$ = $1; }
@@ -175,7 +177,7 @@ instr: IF rval THEN instr %prec IFX              { $$ = binNode(IF, $2, uniNode(
 	| lval '#' rval ';'                          { $$ = binNode(tSTACK, $1, $3); }
 	;
 
-integer:                                         { $$ = nilNode(END); }
+integer:                                         { $$ = nilNode(STOP); }
 	| INTEGER                                    { $$ = intNode(INTEGER, $1); }
 	;
 
@@ -188,33 +190,33 @@ rval: lval,                                      { $$ = uniNode(LOAD, $1); }
 	| '(' rval ')'                               { $$ = $2; }
 	| cte                                        {}
 	| rval '(' args ')'                          { $$ = binNode(CALL, $1, $3); }
-	| rval '(' ')'                               { $$ = uniNode(CALL, $1); }
+	| rval '(' ')'                               { $$ = binNode(CALL, $1, nilNode(STOP)); }
 		| '-' rval %prec UMINUS                  { $$ = uniNode(UMINUS, $2); }
-		| '!' rval                               { $$ = uniNode(NOT, $2);  }
-	| '&' lval %prec ADDR                        { $$ = uniNode(PTR, $2);  }
-	| '~' rval                                   { $$ = uniNode(BNOT, $2); }
+		| '!' rval                               { $$ = uniNode(NOT, $2);   }
+	| '&' lval %prec ADDR                        { $$ = uniNode(ADDR, $2);  }
+	| '~' rval                                   { $$ = uniNode(BNOT, $2);  }
 	| lval INC                                   { $$ = binNode(INC, $1, intNode(INTEGER, $1->info == 3 ? 4 : 1)); }
 	| lval DEC                                   { $$ = binNode(DEC, $1, intNode(INTEGER, $1->info == 3 ? 4 : 1)); }
 	| INC lval                                   { $$ = binNode(INC, intNode(INTEGER, $2->info == 3 ? 4 : 1), $2); }
 	| DEC lval                                   { $$ = binNode(DEC, intNode(INTEGER, $2->info == 3 ? 4 : 1), $2); }
-		| rval '*' rval	                         { $$ = binNode(tMUL, $1, $3);   }
-		| rval '/' rval	                         { $$ = binNode(tDIV, $1, $3);   }
-		| rval '%' rval	                         { $$ = binNode(tMOD, $1, $3);   }
-		| rval '+' rval	                         { $$ = binNode(tADD, $1, $3);   }
-		| rval '-' rval	                         { $$ = binNode(tSUB, $1, $3);   }
-	| rval '<' rval	                             { $$ = binNode(LT, $1, $3);     }
-	| rval '>' rval	                             { $$ = binNode(GT, $1, $3);     }
-	| rval GE rval	                             { $$ = binNode(GE, $1, $3);     }
-	| rval LE rval	                             { $$ = binNode(LE, $1, $3);     }
-	| rval '=' rval	                             { $$ = binNode(EQ, $1, $3);     }
-	| rval NE rval	                             { $$ = binNode(NE, $1, $3);     }
-		| rval '&' rval	                         { $$ = binNode(BAND, $1, $3);   }
-		| rval '|' rval	                         { $$ = binNode(BOR, $1, $3);    }
-	| lval ASSIGN rval                           { $$ = binNode(ASSIGN, $1, $3); }
+		| rval '*' rval	                         { $$ = binNode(MUL, $1, $3);   }
+		| rval '/' rval	                         { $$ = binNode(DIV, $1, $3);   }
+		| rval '%' rval	                         { $$ = binNode(MOD, $1, $3);   }
+		| rval '+' rval	                         { $$ = binNode(ADD, $1, $3);   }
+		| rval '-' rval	                         { $$ = binNode(SUBT, $1, $3);  }
+	| rval '<' rval	                             { $$ = binNode(LT, $1, $3);    }
+	| rval '>' rval	                             { $$ = binNode(GT, $1, $3);    }
+	| rval GE rval	                             { $$ = binNode(GE, $1, $3);    }
+	| rval LE rval	                             { $$ = binNode(LE, $1, $3);    }
+	| rval '=' rval	                             { $$ = binNode(EQ, $1, $3);    }
+	| rval NE rval	                             { $$ = binNode(NE, $1, $3);    }
+		| rval '&' rval	                         { $$ = binNode(BAND, $1, $3);  }
+		| rval '|' rval	                         { $$ = binNode(BOR, $1, $3);   }
+	| lval ASSIGN rval                           { $$ = binNode(ASSIGN, $1, $3);}
 	;
 
-args: rval                                       { $$ = binNode(tARGS, $1, nilNode(END));      }
-	| args ',' rval                              { $$ = binNode(tARGS, $1, $3);  }
+args: rval                                       { $$ = binNode(ARG, $1, nilNode(STOP)); }
+	| args ',' rval                              { $$ = binNode(ARG, $1, $3);  }
 	;
 
 %%
