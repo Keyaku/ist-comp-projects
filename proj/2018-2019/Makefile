@@ -8,18 +8,20 @@ RUN=run # runtime directory
 EXS=exs # examples directory
 CC=gcc
 CFLAGS=-g -DYYDEBUG
+LDFLAGS = -I$(LIB) -I$(SRCDIR) -L$(LIB) -l$(UTIL)
 
-UNAME := $(shell uname -s)
+CFILES = lex.yy.c y.tab.c #yyselect.c
+
 
 # RULES
 all: $(EXEC)
 
-$(EXEC): $(LANG).y $(LANG).l $(LANG).brg
+$(EXEC): $(LANG).y $(LANG).l #$(LANG).brg
 	make -C $(LIB)
 	flex -l $(LANG).l
 	byacc -dv $(LANG).y
-	pburg -T $(LANG).brg
-	$(LINK.c) -o $@ $(ARCH) -I$(LIB) lex.yy.c y.tab.c yyselect.c -L$(LIB) -l$(UTIL)
+	#pburg -T $(LANG).brg
+	$(LINK.c) -o $@ $(ARCH) $(LDFLAGS) $(CFILES)
 
 
 examples:: $(LANG)
