@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "node.h"
-#include "tabid.h"
+#include "diy.h"
 
 extern int yylex(), yyparse(void);
 extern void* yyin;
@@ -21,8 +21,6 @@ int errors;
 #ifndef YYERRCODE
 #define YYERRCODE 256
 #endif
-
-#define arrlen(x)  (sizeof(x) / sizeof((x)[0]))
 
 %}
 
@@ -59,10 +57,10 @@ int errors;
 
 %token FILE_TOKEN DECLARATION DEFINITION INSTRUCTION BODY PARAM PARAMS
 %token BODY_PARAM INSTR_PARAM
-%token CTE FOR_BLOCK FORSTEP FORTO UPTO DOWNTO ARG ARGS tSTACK
+%token CTE FOR_BLOCK FORSTEP FORTO UPTO DOWNTO ARG ARGS STACK
 
 %token ATTRIBUTES MODIFIERS REFERENCE TYPE INDEX LOAD CALL STOP
-%token PROCEDURE PARAMETERS BLOCK
+%token PROCEDURE PARAMETERS INITIALIZATION
 
 %type<n> PUBLIC CONST TYPE ASSIGN
 
@@ -94,7 +92,7 @@ cons:                                            { $$ = nilNode(STOP); }
 	| CONST                                      { $$ = nilNode(CONST); }
 	;
 
-ref: type star                                   { $$ = binNode(REFERENCE, $1, $2); }
+ref: type star                                   { $$ = binNode(REFERENCE, $1, $2);  }
 	;
 
 star:                                            { $$ = nilNode(STOP); }
@@ -115,7 +113,7 @@ ident: IDENTIFIER                                { $$ = strNode(IDENTIFIER, $1);
 
 init: ASSIGN cte                                 { $$ = binNode(ASSIGN, $1, $2); }
 	| ASSIGN ident                               { $$ = binNode(ASSIGN, $1, $2); }
-	|'(' initparams ')' initbody                 { $$ = binNode(BLOCK, $2, $4); }
+	|'(' initparams ')' initbody                 { $$ = binNode(INITIALIZATION, $2, $4); }
 	;
 
 param: ref ident                                 { $$ = binNode(PARAM, $1, $2); }
@@ -123,7 +121,6 @@ param: ref ident                                 { $$ = binNode(PARAM, $1, $2); 
 
 params: param                                    { $$ = $1; }
 	| params ',' param                           { $$ = binNode(PARAMETERS, $1, $3); }
-	// | params ',' param                           { $$ = addNode($1, $3, 0); }
 	;
 
 initparams:                                      { $$ = nilNode(STOP); }
@@ -174,7 +171,7 @@ instr: IF rval THEN instr %prec IFX              { $$ = binNode(IF, $2, uniNode(
 	| body                                       { $$ = $1; }
 	| BREAK integer ';'                          { $$ = uniNode(BREAK, $2); }
 	| CONTINUE integer ';'                       { $$ = uniNode(CONTINUE, $2); }
-	| lval '#' rval ';'                          { $$ = binNode(tSTACK, $1, $3); }
+	| lval '#' rval ';'                          { $$ = binNode(STACK, $1, $3); }
 	;
 
 integer:                                         { $$ = nilNode(STOP); }
@@ -199,19 +196,19 @@ rval: lval,                                      { $$ = uniNode(LOAD, $1); }
 	| lval DEC                                   { $$ = binNode(DEC, $1, intNode(INTEGER, $1->info == 3 ? 4 : 1)); }
 	| INC lval                                   { $$ = binNode(INC, intNode(INTEGER, $2->info == 3 ? 4 : 1), $2); }
 	| DEC lval                                   { $$ = binNode(DEC, intNode(INTEGER, $2->info == 3 ? 4 : 1), $2); }
-		| rval '*' rval	                         { $$ = binNode(MUL, $1, $3);   }
-		| rval '/' rval	                         { $$ = binNode(DIV, $1, $3);   }
-		| rval '%' rval	                         { $$ = binNode(MOD, $1, $3);   }
-		| rval '+' rval	                         { $$ = binNode(ADD, $1, $3);   }
-		| rval '-' rval	                         { $$ = binNode(SUBT, $1, $3);  }
-	| rval '<' rval	                             { $$ = binNode(LT, $1, $3);    }
-	| rval '>' rval	                             { $$ = binNode(GT, $1, $3);    }
-	| rval GE rval	                             { $$ = binNode(GE, $1, $3);    }
-	| rval LE rval	                             { $$ = binNode(LE, $1, $3);    }
-	| rval '=' rval	                             { $$ = binNode(EQ, $1, $3);    }
-	| rval NE rval	                             { $$ = binNode(NE, $1, $3);    }
-		| rval '&' rval	                         { $$ = binNode(BAND, $1, $3);  }
-		| rval '|' rval	                         { $$ = binNode(BOR, $1, $3);   }
+		| rval '*' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(MUL, $1, $3); }
+		| rval '/' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(DIV, $1, $3); }
+		| rval '%' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(MOD, $1, $3); }
+		| rval '+' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(ADD, $1, $3); }
+		| rval '-' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(SUBT, $1, $3); }
+	| rval '<' rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(LT, $1, $3); $$->info = TYPE_INT; }
+	| rval '>' rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(GT, $1, $3); $$->info = TYPE_INT; }
+	| rval LE rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(LE, $1, $3); $$->info = TYPE_INT; }
+	| rval GE rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(GE, $1, $3); $$->info = TYPE_INT; }
+	| rval NE rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(NE, $1, $3); $$->info = TYPE_INT; }
+	| rval '=' rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(EQ, $1, $3); $$->info = TYPE_INT; }
+		| rval '&' rval	                         { if (!is_int($1) || !is_int($3)) { return 1; } $$ = binNode(BAND, $1, $3); }
+		| rval '|' rval	                         { if (!is_int($1) || !is_int($3)) { return 1; } $$ = binNode(BOR, $1, $3); }
 	| lval ASSIGN rval                           { $$ = binNode(ASSIGN, $1, $3);}
 	;
 
@@ -221,6 +218,81 @@ args: rval                                       { $$ = binNode(ARG, $1, nilNode
 
 %%
 
+/* ********************* Semantic analysis functions ********************* */
+/* is_ checking functions */
+bool is_any(const Node *n, NodeType *types, const char **types_str, int size)
+{
+	int i;
+	char msg[256] = "Value is not of type";
+
+	for (i = 0; i < size; i++) {
+		if (n->type == types[i]) { return true; }
+		strcat(msg, " "); strcat(msg, types_str[i]); strcat(msg, ",");
+	}
+
+	yyerror(msg);
+	return false;
+}
+
+bool is_int(const Node *n)
+{
+	static NodeType types[] = { nodeInt };
+	static const char *types_str[] = { "integer" };
+	return is_any(n, types, types_str, arrlen(types));
+}
+
+bool is_num(const Node *n)
+{
+	static NodeType types[] = { nodeReal };
+	static const char *types_str[] = { "number" };
+	return is_any(n, types, types_str, arrlen(types));
+}
+
+bool is_str(const Node *n)
+{
+	static NodeType types[] = { nodeStr };
+	static const char *types_str[] = { "string" };
+	return is_any(n, types, types_str, arrlen(types));
+}
+
+bool is_int_or_num(const Node *n)
+{
+	static NodeType types[] = { nodeInt, nodeReal };
+	static const char *types_str[] = { "integer", "number" };
+	return is_any(n, types, types_str, arrlen(types));
+}
+
+bool is_val(const Node *n)
+{
+	static NodeType types[] = { nodeInt, nodeReal, nodeStr };
+	static const char *types_str[] = { "integer", "number", "string" };
+	return is_any(n, types, types_str, arrlen(types));
+}
+
+/* Comparator functions */
+#define node_value(n) \
+	n->type == nodeInt ? n->value.i : n->type == nodeReal ? n->value.d : n->type == nodeStr ? n->value.s : 0
+
+bool can_cmp_val(const Node *n1, const Node *n2) {
+	NodeType num_types[] = { nodeInt, nodeReal };
+
+	/* Checking if they're numbers */
+	if ((n1->type == num_types[0] && n2->type == num_types[1])
+	|| (n1->type == num_types[1] && n2->type == num_types[0])) {
+		return true;
+	}
+	/* Checking if they're of equal types */
+	if (n1->type == n2->type) {
+		return true;
+	}
+
+	yyerror("Nodes are not of proper type");
+	return false;
+}
+
+
+
+/* Auxiliary */
 int yyerror(char *s)
 {
 	extern int yylineno;
@@ -230,6 +302,8 @@ int yyerror(char *s)
 	return 1;
 }
 
+
+/* **************************** MAIN **************************** */
 int lexer() {
 	/* Outputting lexer content */
 	while ((tk = yylex())) {
