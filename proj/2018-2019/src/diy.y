@@ -1,26 +1,10 @@
 %{
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
 
 #include "diy.h"
 
 #include "node.h"
 #include "tabid.h"
-#include "y.tab.h"
-
-extern int yylex(), yyparse(void);
-extern void* yyin;
-extern void* yyout;
-int yyerror(char *s);
-int tk;
-
-int errors;
-
-#ifndef YYERRCODE
-#define YYERRCODE 256
-#endif
 
 %}
 
@@ -107,7 +91,7 @@ type: TYPE_VOID                                  { $$ = nilNode(TYPE_VOID); }
 
 def: atr ident init ';'                          {
 		$$ = binNode(DEFINITION, $1, binNode(PROCEDURE, $2, $3));
-		IDnew($2->info, $2->value.s, POS);
+		IDnew($2->info, $2->value.s, 0);
 	}
 	;
 
@@ -124,7 +108,10 @@ cte: INTEGER                                     { $$ = intNode(INTEGER, $1); }
 	| NUMBER                                     { $$ = realNode(NUMBER, $1); }
 	;
 
-param: ref ident                                 { $$ = binNode(PARAM, $1, $2); }
+param: ref ident                                 {
+		$$ = binNode(PARAM, $1, $2);
+
+	}
 	;
 
 params: param                                    { $$ = $1; }
