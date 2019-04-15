@@ -21,24 +21,22 @@ int errors;
 
 
 /* Auxiliary */
-int yyerror(char *s)
+int yyerror(char *s, ...)
 {
 	extern int yylineno;
 	extern char *getyytext();
-	fprintf(stderr, "%s: %s at or before '%s' in line %d\n", infile, s, getyytext(), yylineno);
-	errors++;
-	return 1;
-}
-
-int yyerrorf(char *fmt, ...) {
 	va_list args;
-	char msg[256];
 
-	va_start(args, fmt);
-	vsprintf(msg, fmt, args);
+	fprintf(stderr, "%s: ", infile);
+
+	va_start(args, s);
+	vfprintf(stderr, s, args);
 	va_end(args);
 
-	return yyerror(msg);
+	fprintf(stderr, " at or before '%s' in line %d\n", getyytext(), yylineno);
+	errors++;
+
+	return 1;
 }
 
 
