@@ -24,7 +24,7 @@ $(EXEC): $(LANG).y $(LANG).l #$(LANG).brg
 	flex -o $(LEXFILES) -l $(LANG).l
 	byacc -o $(YACCFILES) -dvr $(LANG).y
 	#pburg -T $(LANG).brg
-	$(LINK.c) -o $@ $(ARCH) $(LDFLAGS) $(CFILES) $(LANG).c
+	$(LINK.c) -o $@ $(ARCH) $(CFILES) $(LANG).c
 
 
 examples:: $(LANG)
