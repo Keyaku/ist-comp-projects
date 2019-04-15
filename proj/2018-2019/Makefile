@@ -8,9 +8,12 @@ RUN=run # runtime directory
 EXS=exs # examples directory
 CC=gcc
 CFLAGS=-g -DYYDEBUG
-LDFLAGS = -I$(LIB) -I$(SRCDIR) -L$(LIB) -l$(UTIL)
+LDFLAGS = -I$(LIB) -L$(LIB) -l$(UTIL)
 
-CFILES = lex.yy.c y.tab.c #yyselect.c
+LEXFILES = $(SRCDIR)/lex.yy.c
+YACCFILES= $(SRCDIR)/y.tab.c
+BURGFILES= $(SRCDIR)/yyselect.c
+CFILES =  $(LEXFILES) $(YACCFILES) #$(BURGFILES)
 
 
 # RULES
@@ -18,8 +21,8 @@ all: $(EXEC)
 
 $(EXEC): $(LANG).y $(LANG).l #$(LANG).brg
 	make -C $(LIB)
-	flex -l $(LANG).l
-	byacc -dv $(LANG).y
+	flex -o $(LEXFILES) -l $(LANG).l
+	byacc -o $(YACCFILES) -dv $(LANG).y
 	#pburg -T $(LANG).brg
 	$(LINK.c) -o $@ $(ARCH) $(LDFLAGS) $(CFILES)
 
@@ -28,10 +31,10 @@ examples:: $(LANG)
 	make -C $(EXS)
 
 zip::
-	zip -r proj.zip Makefile $(LANG).l $(LANG).y $(EXS)
+	zip -r proj.zip Makefile $(SRCDIR) $(EXS)
 
 clean::
 	make -C $(LIB) clean
 	make -C $(RUN) clean
 	make -C $(EXS) clean
-	rm -rf *.o $(EXEC) *.dSYM lex.yy.c y.tab.c y.tab.h y.output yyselect.c *.asm *~
+	rm -rf *.o $(EXEC) *.dSYM $(CFILES) $(SRCDIR)/y.tab.h $(SRCDIR)/y.output *.asm *~
