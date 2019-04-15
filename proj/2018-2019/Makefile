@@ -13,7 +13,7 @@ LDFLAGS = -I$(LIB) -L$(LIB) -l$(UTIL)
 LEXFILES = $(SRCDIR)/lex.yy.c
 YACCFILES= $(SRCDIR)/y.tab.c
 BURGFILES= $(SRCDIR)/yyselect.c
-CFILES =  $(LEXFILES) $(YACCFILES) #$(BURGFILES)
+CFILES =  $(LEXFILES) $(YACCFILES) $(SRCDIR)/y.code.c #$(BURGFILES)
 
 
 # RULES
@@ -22,9 +22,9 @@ all: $(EXEC)
 $(EXEC): $(LANG).y $(LANG).l #$(LANG).brg
 	make -C $(LIB)
 	flex -o $(LEXFILES) -l $(LANG).l
-	byacc -o $(YACCFILES) -dv $(LANG).y
+	byacc -o $(YACCFILES) -dvr $(LANG).y
 	#pburg -T $(LANG).brg
-	$(LINK.c) -o $@ $(ARCH) $(LDFLAGS) $(CFILES)
+	$(LINK.c) -o $@ $(ARCH) $(LDFLAGS) $(CFILES) $(LANG).c
 
 
 examples:: $(LANG)

@@ -8,10 +8,12 @@ sol
 *.code-workspace
 *.vscode
 core
+*.tree
 
-# Lex-files
+# Lex and Yacc-files
 *lex.yy.c
 *y.output
+*y.code.c
 *y.tab.c
 *y.tab.h
 *yyselect.c

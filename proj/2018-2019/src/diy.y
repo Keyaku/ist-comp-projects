@@ -4,17 +4,17 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "node.h"
 #include "diy.h"
+
+#include "node.h"
+#include "tabid.h"
+#include "y.tab.h"
 
 extern int yylex(), yyparse(void);
 extern void* yyin;
 extern void* yyout;
 int yyerror(char *s);
 int tk;
-
-char *infile = "<<stdin>>",
-	*outfile = NULL;
 
 int errors;
 
@@ -105,15 +105,23 @@ type: TYPE_VOID                                  { $$ = nilNode(TYPE_VOID); }
 	| TYPE_STR                                   { $$ = nilNode(TYPE_STR); }
 	;
 
-def: atr ident init ';'                          { $$ = binNode(DEFINITION, $1, binNode(PROCEDURE, $2, $3)); }
+def: atr ident init ';'                          {
+		$$ = binNode(DEFINITION, $1, binNode(PROCEDURE, $2, $3));
+		IDnew($2->info, $2->value.s, POS);
+	}
 	;
 
 ident: IDENTIFIER                                { $$ = strNode(IDENTIFIER, $1); }
 	;
 
-init: ASSIGN cte                                 { $$ = binNode(ASSIGN, $1, $2); }
-	| ASSIGN ident                               { $$ = binNode(ASSIGN, $1, $2); }
-	|'(' initparams ')' initbody                 { $$ = binNode(INITIALIZATION, $2, $4); }
+init: ASSIGN cte                                 { $$ = uniNode(ASSIGN, $2); }
+	| ASSIGN ident                               { $$ = uniNode(ASSIGN, $2); }
+	|'(' { IDpush(); } initparams { IDpop(); } ')' initbody  { $$ = binNode(INITIALIZATION, $3, $6); }
+	;
+
+cte: INTEGER                                     { $$ = intNode(INTEGER, $1); }
+	| cons STRING                                { $$ = binNode(STRING, $1, strNode(STRING, $2)); }
+	| NUMBER                                     { $$ = realNode(NUMBER, $1); }
 	;
 
 param: ref ident                                 { $$ = binNode(PARAM, $1, $2); }
@@ -139,12 +147,7 @@ iparam:                                          { $$ = nilNode(STOP); }
 	| iparam instr                               { $$ = binNode(INSTRUCTION, $1, $2); }
 	;
 
-cte: INTEGER                                     { $$ = intNode(INTEGER, $1); }
-	| cons STRING                                { $$ = binNode(STRING, $1, strNode(STRING, $2)); }
-	| NUMBER                                     { $$ = realNode(NUMBER, $1); }
-	;
-
-body: '{' bparam iparam '}'                      { $$ = binNode(BODY, $2, $3); }
+body: '{' { IDpush(); } bparam iparam { IDpop(); } '}'   { $$ = binNode(BODY, $3, $4); }
 	;
 
 for: FOR lval IN rval                            { $$ = binNode(FOR, $2, uniNode(IN, $4)); }
@@ -164,7 +167,7 @@ step:                                            { $$ = nilNode(STOP); }
 instr: IF rval THEN instr %prec IFX              { $$ = binNode(IF, $2, uniNode(THEN, $4)); }
 	| IF rval THEN instr ELSE instr              { $$ = binNode(IF, $2, binNode(THEN, $4, uniNode(ELSE, $6))); }
 	| do WHILE rval ';'                          { $$ = binNode(WHILE, $1, $3); }
-	| for forto step do   {
+	| for forto step do                          {
 		$$ = binNode(FOR_BLOCK, $1, binNode(FORTO, $2, binNode(FORSTEP, $3, $4)));
 	}
 	| rval ';'                                   { $$ = $1; }
@@ -185,7 +188,7 @@ lval: ident                                      { $$ = $1; }
 
 rval: lval,                                      { $$ = uniNode(LOAD, $1); }
 	| '(' rval ')'                               { $$ = $2; }
-	| cte                                        {}
+	| cte                                        { $$ = $1; }
 	| rval '(' args ')'                          { $$ = binNode(CALL, $1, $3); }
 	| rval '(' ')'                               { $$ = binNode(CALL, $1, nilNode(STOP)); }
 		| '-' rval %prec UMINUS                  { $$ = uniNode(UMINUS, $2); }
@@ -209,7 +212,7 @@ rval: lval,                                      { $$ = uniNode(LOAD, $1); }
 	| rval '=' rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(EQ, $1, $3); $$->info = TYPE_INT; }
 		| rval '&' rval	                         { if (!is_int($1) || !is_int($3)) { return 1; } $$ = binNode(BAND, $1, $3); }
 		| rval '|' rval	                         { if (!is_int($1) || !is_int($3)) { return 1; } $$ = binNode(BOR, $1, $3); }
-	| lval ASSIGN rval                           { $$ = binNode(ASSIGN, $1, $3);}
+	| lval ASSIGN rval                           { $$ = binNode(ASSIGN, $1, $3); }
 	;
 
 args: rval                                       { $$ = binNode(ARG, $1, nilNode(STOP)); }
@@ -290,60 +293,3 @@ bool can_cmp_val(const Node *n1, const Node *n2) {
 	return false;
 }
 
-
-
-/* Auxiliary */
-int yyerror(char *s)
-{
-	extern int yylineno;
-	extern char *getyytext();
-	fprintf(stderr, "%s: %s at or before '%s' in line %d\n", infile, s, getyytext(), yylineno);
-	errors++;
-	return 1;
-}
-
-
-/* **************************** MAIN **************************** */
-int lexer() {
-	/* Outputting lexer content */
-	while ((tk = yylex())) {
-		if (tk > YYERRCODE) {
-			printf("%d:\t%s\n", tk, yyname[tk]);
-		} else {
-			printf("%d:\t%c\n", tk, tk);
-		}
-	}
-
-	return 0;
-}
-
-int compiler() {
-	return yyparse();
-}
-
-typedef enum { LEXER = 0, COMPILER, ASSEMBLY } Mode;
-int (*fn[])() = { lexer, compiler };
-
-int main(int argc, char *argv[]) {
-	extern YYSTYPE yylval;
-	int retval = 0;
-	Mode mode = COMPILER;
-#ifdef YYDEBUG
-	extern int yydebug;
-	yydebug = getenv("YYDEBUG") ? 1 : 0;
-#endif
-
-	/* Opening file from input or from given argument */
-	if (argc > 1) {
-		infile = argv[1];
-		yyin = fopen(infile, "r");
-	}
-
-	/* Executing the appropriate code for this part */
-	retval = fn[mode]();
-
-	fclose(yyin);
-	fclose(yyout);
-
-	return retval;
-}
