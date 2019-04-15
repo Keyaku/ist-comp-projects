@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "node.h"
 #include "diy.h"
@@ -27,6 +28,17 @@ int yyerror(char *s)
 	fprintf(stderr, "%s: %s at or before '%s' in line %d\n", infile, s, getyytext(), yylineno);
 	errors++;
 	return 1;
+}
+
+int yyerrorf(char *fmt, ...) {
+	va_list args;
+	char msg[256];
+
+	va_start(args, fmt);
+	vsprintf(msg, fmt, args);
+	va_end(args);
+
+	return yyerror(msg);
 }
 
 

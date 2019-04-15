@@ -10,7 +10,7 @@ enum { false, true };
 #define arrlen(x)  (sizeof(x) / sizeof((x)[0]))
 
 /* Yacc material */
-int yyerror(char *s);
+int yyerror(char *s), yyerrorf(char *s, ...);
 extern void* yyout;
 int tk;
 
