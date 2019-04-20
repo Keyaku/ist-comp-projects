@@ -10,21 +10,22 @@ CC=gcc
 CFLAGS=-g -DYYDEBUG
 LDFLAGS = -I$(LIB) -L$(LIB) -l$(UTIL)
 
+CINFILES = $(LANG).c $(LANG).h
 LEXFILES = $(SRCDIR)/lex.yy.c
 YACCFILES= $(SRCDIR)/y.tab.c
 BURGFILES= $(SRCDIR)/yyselect.c
-CFILES =  $(LEXFILES) $(YACCFILES) $(SRCDIR)/y.code.c #$(BURGFILES)
+COUTFILES = $(LEXFILES) $(YACCFILES) $(SRCDIR)/y.code.c #$(BURGFILES)
 
 
 # RULES
 all: $(EXEC)
 
-$(EXEC): $(LANG).y $(LANG).l #$(LANG).brg
+$(EXEC): $(CINFILES) $(LANG).l $(LANG).y #$(LANG).brg
 	make -C $(LIB)
 	flex -o $(LEXFILES) -l $(LANG).l
 	byacc -o $(YACCFILES) -dvr $(LANG).y
 	#pburg -T $(LANG).brg
-	$(LINK.c) -o $@ $(ARCH) $(CFILES) $(LANG).c
+	$(LINK.c) -o $@ $(ARCH) $(COUTFILES) $(LANG).c
 
 
 examples:: $(LANG)
@@ -37,4 +38,4 @@ clean::
 	make -C $(LIB) clean
 	make -C $(RUN) clean
 	make -C $(EXS) clean
-	rm -rf *.o $(EXEC) *.dSYM $(CFILES) $(SRCDIR)/y.tab.h $(SRCDIR)/y.output *.asm *~
+	rm -rf *.o $(EXEC) *.dSYM $(COUTFILES) $(SRCDIR)/y.tab.h $(SRCDIR)/y.output *.asm *~

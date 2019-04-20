@@ -1,10 +1,20 @@
 %{
-#include <string.h>
+#include <stdlib.h>
 
 #include "diy.h"
 
 #include "node.h"
 #include "tabid.h"
+
+void declare(int pub, int cnst, Node *type, char *name, Node *value);
+void function(int pub, Node *type, char *name, Node *body);
+void enter(int pub, int typ, char *name);
+int checkargs(char *name, Node *args);
+int nostring(Node *arg1, Node *arg2);
+int intonly(Node *arg, int);
+int noassign(Node *arg1, Node *arg2);
+static int ncicl;
+static char *fpar;
 
 %}
 
@@ -17,266 +27,292 @@
 
 %token <i> INTEGER
 %token <d> NUMBER
-%token <s> STRING IDENTIFIER
-
-%token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM
-%token PUBLIC CONST
-%token IF THEN ELSE
-%token WHILE DO FOR IN STEP UPTO DOWNTO BREAK CONTINUE
-
-%token LT LE GT GE EQ NE INC DEC ASSIGN BAND BOR
-%token MUL DIV MOD ADD SUBT
-
+%token <s> IDENTIFIER STRING
+%token DO WHILE IF THEN FOR IN UPTO DOWNTO STEP BREAK CONTINUE
+%token TYPE_VOID TYPE_INT TYPE_STR TYPE_NUM CONST PUBLIC INC DEC
 %nonassoc IFX
 %nonassoc ELSE
+
 %right ASSIGN
-%left '<' '>' '=' LE GE NE
+%left '|'
+%left '&'
+%nonassoc '~'
+%left '=' NE
+%left GE LE '>' '<'
 %left '+' '-'
 %left '*' '/' '%'
-%nonassoc '~' BNOT
-%left '|' BOR
-%left '&' BAND
-%nonassoc '(' ')' '[' ']'
-%nonassoc PTR ADDR '!' NOT UMINUS INC DEC
+%nonassoc UMINUS '!' NOT REF
+%nonassoc '[' '('
 
-%token FILE_TOKEN DECLARATION DEFINITION INSTRUCTION BODY PARAM PARAMS
-%token BODY_PARAM INSTR_PARAM
-%token CTE FOR_BLOCK FORSTEP FORTO UPTO DOWNTO ARG ARGS STACK
 
-%token ATTRIBUTES MODIFIERS REFERENCE TYPE INDEX LOAD CALL STOP
-%token PROCEDURE PARAMETERS INITIALIZATION
+%type <n> type init finit blocop params
+%type <n> bloco decls param base stmt step args list end brk lval expr
+%type <i> ptr intp public
 
-%type<n> PUBLIC CONST TYPE ASSIGN
-
-%type<n> decl def
-%type<n> atr mod ref publ cons type star ident init
-%type<n> cte integer instr lval rval args
-%type<n> param params body for forto do step
-%type<n> initparams initbody bparam iparam
-
+%token LOCAL POSINC POSDEC PTR CALL START PARAM NIL
 
 %%
 
-file: decl;                                      { printNode(uniNode(FILE_TOKEN, $1), yyout, (char**)yyname); }
-decl:                                            { $$ = nilNode(STOP); }
-	| decl def                                   { $$ = binNode(DECLARATION, $1, $2); }
+file:
+	| file error ';'
+	| file public type IDENTIFIER ';'	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, 0); }
+	| file public CONST type IDENTIFIER ';'	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, 0); }
+	| file public type IDENTIFIER init	{ IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, $5); }
+	| file public CONST type IDENTIFIER init	{ IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, $6); }
+	| file public type IDENTIFIER { enter($2, $3->value.i, $4); } finit { function($2, $3, $4, $6); }
+	| file public TYPE_VOID IDENTIFIER { enter($2, 4, $4); } finit { function($2, intNode(TYPE_VOID, 4), $4, $6); }
 	;
 
-atr: mod ref                                     { $$ = binNode(ATTRIBUTES, $1, $2); }
+public:               { $$ = 0; }
+	| PUBLIC        { $$ = 1; }
 	;
 
-mod: publ cons                                   { $$ = binNode(MODIFIERS, $1, $2); }
+ptr:               { $$ = 0; }
+	| '*'           { $$ = 10; }
 	;
 
-publ:                                            { $$ = nilNode(STOP); }
-	| PUBLIC                                     { $$ = nilNode(PUBLIC); }
+type: TYPE_INT ptr	{ $$ = intNode(TYPE_INT, 1+$2); }
+	| TYPE_STR ptr	{ $$ = intNode(TYPE_STR, 2+$2); }
+	| TYPE_NUM ptr	{ $$ = intNode(TYPE_NUM, 3+$2); }
 	;
 
-cons:                                            { $$ = nilNode(STOP); }
-	| CONST                                      { $$ = nilNode(CONST); }
+init: ASSIGN IDENTIFIER ';'		{ $$ = strNode(IDENTIFIER, $2); $$->info = IDfind($2, 0) + 10; }
+	| ASSIGN INTEGER ';'		{ $$ = intNode(INTEGER, $2); $$->info = 1; }
+	| ASSIGN '-' INTEGER ';'	{ $$ = intNode(INTEGER, -$3); $$->info = 1; }
+	| ASSIGN STRING ';'		{ $$ = strNode(STRING, $2); $$->info = 2; }
+	| ASSIGN CONST STRING ';'	{ $$ = strNode(CONST, $3); $$->info = 2+5; }
+	| ASSIGN NUMBER ';'		{ $$ = realNode(NUMBER, $2); $$->info = 3; }
+	| ASSIGN '-' NUMBER ';'	{ $$ = realNode(NUMBER, -$3); $$->info = 3; }
+        ;
+
+finit: '(' params ')' blocop { $$ = binNode('(', $4, $2); }
+	| '(' ')' blocop        { $$ = binNode('(', $3, 0); }
 	;
 
-ref: type star                                   { $$ = binNode(REFERENCE, $1, $2);  }
+blocop: ';'   { $$ = 0; }
+        | bloco ';'   { $$ = $1; }
+        ;
+
+params: param
+	| params ',' param      { $$ = binNode(',', $1, $3); }
 	;
 
-star:                                            { $$ = nilNode(STOP); }
-	| '*'                                        { $$ = nilNode(PTR); }
+bloco: '{' { IDpush(); } decls list end '}'    { $$ = binNode('{', $5 ? binNode(';', $4, $5) : $4, $3); IDpop(); }
 	;
 
-type: TYPE_VOID                                  { $$ = nilNode(TYPE_VOID); }
-	| TYPE_INT                                   { $$ = nilNode(TYPE_INT); }
-	| TYPE_NUM                                   { $$ = nilNode(TYPE_NUM); }
-	| TYPE_STR                                   { $$ = nilNode(TYPE_STR); }
+decls:                       { $$ = 0; }
+	| decls param ';'       { $$ = binNode(';', $1, $2); }
 	;
 
-def: atr ident init ';'                          {
-		$$ = binNode(DEFINITION, $1, binNode(PROCEDURE, $2, $3));
-		IDnew($2->info, $2->value.s, 0);
-	}
+param: type IDENTIFIER               { $$ = binNode(PARAM, $1, strNode(IDENTIFIER, $2));
+                                  IDnew($1->value.i, $2, 0);
+                                  if (IDlevel() == 1) fpar[++fpar[0]] = $1->value.i;
+                                }
 	;
 
-ident: IDENTIFIER                                { $$ = strNode(IDENTIFIER, $1); }
+stmt: base
+	| brk
 	;
 
-init: ASSIGN cte                                 { $$ = uniNode(ASSIGN, $2); }
-	| ASSIGN ident                               { $$ = uniNode(ASSIGN, $2); }
-	|'(' { IDpush(); } initparams { IDpop(); } ')' initbody  { $$ = binNode(INITIALIZATION, $3, $6); }
+base: ';'                   { $$ = nilNode(TYPE_VOID); }
+	| DO { ncicl++; } stmt WHILE expr ';' { $$ = binNode(WHILE, binNode(DO, nilNode(START), $3), $5); ncicl--; }
+	| FOR lval IN expr UPTO expr step DO { ncicl++; } stmt       { $$ = binNode(';', binNode(ASSIGN, $4, $2), binNode(FOR, binNode(IN, nilNode(START), binNode(LE, uniNode(PTR, $2), $6)), binNode(';', $10, binNode(ASSIGN, binNode('+', uniNode(PTR, $2), $7), $2)))); ncicl--; }
+	| FOR lval IN expr DOWNTO expr step DO { ncicl++; } stmt       { $$ = binNode(';', binNode(ASSIGN, $4, $2), binNode(FOR, binNode(IN, nilNode(START), binNode(GE, uniNode(PTR, $2), $6)), binNode(';', $10, binNode(ASSIGN, binNode('-', uniNode(PTR, $2), $7), $2)))); ncicl--; }
+	| IF expr THEN stmt %prec IFX    { $$ = binNode(IF, $2, $4); }
+	| IF expr THEN stmt ELSE stmt    { $$ = binNode(ELSE, binNode(IF, $2, $4), $6); }
+	| expr ';'              { $$ = $1; }
+	| bloco                 { $$ = $1; }
+	| lval '#' expr ';'       { $$ = binNode('#', $3, $1); }
+	| error ';'       { $$ = nilNode(NIL); }
 	;
 
-cte: INTEGER                                     { $$ = intNode(INTEGER, $1); }
-	| cons STRING                                { $$ = binNode(STRING, $1, strNode(STRING, $2)); }
-	| NUMBER                                     { $$ = realNode(NUMBER, $1); }
+end:		{ $$ = 0; }
+	| brk;
+
+brk: BREAK intp ';'        { $$ = intNode(BREAK, $2); if ($2 <= 0 || $2 > ncicl) yyerror("invalid break argument"); }
+	| CONTINUE intp ';'     { $$ = intNode(CONTINUE, $2); if ($2 <= 0 || $2 > ncicl) yyerror("invalid continue argument"); }
 	;
 
-param: ref ident                                 {
-		$$ = binNode(PARAM, $1, $2);
-
-	}
+step:               { $$ = intNode(INTEGER, 1); }
+	| STEP expr     { $$ = $2; }
 	;
 
-params: param                                    { $$ = $1; }
-	| params ',' param                           { $$ = binNode(PARAMETERS, $1, $3); }
+intp:       { $$ = 1; }
+	| INTEGER
 	;
 
-initparams:                                      { $$ = nilNode(STOP); }
-	| params                                     { $$ = $1; }
+list: base
+	| list base     { $$ = binNode(';', $1, $2); }
 	;
 
-initbody:                                        { $$ = nilNode(STOP); }
-	| body                                       { $$ = $1; }
+args: expr		{ $$ = binNode(',', nilNode(NIL), $1); }
+	| args ',' expr { $$ = binNode(',', $1, $3); }
 	;
 
-bparam:                                          { $$ = nilNode(STOP); }
-	| bparam param ';'                           { $$ = binNode(DEFINITION, $1, $2); }
+lval: IDENTIFIER		{ long pos; int typ = IDfind($1, &pos);
+                          if (pos == 0) $$ = strNode(IDENTIFIER, $1);
+                          else $$ = intNode(LOCAL, pos);
+			  $$->info = typ;
+			}
+	| IDENTIFIER '[' expr ']' { Node *n;
+                            long pos; int siz, typ = IDfind($1, &pos);
+                            if (typ / 10 != 1 && typ % 5 != 2) yyerror("not a pointer");
+                            if (pos == 0) n = strNode(IDENTIFIER, $1);
+                            else n = intNode(LOCAL, pos);
+                            $$ = binNode('[', n, $3);
+			    if (typ >= 10) typ -= 10;
+                            else if (typ % 5 == 2) typ = 1;
+			    if (typ >= 5) typ -= 5;
+			    $$->info = typ;
+			  }
 	;
 
-iparam:                                          { $$ = nilNode(STOP); }
-	| iparam instr                               { $$ = binNode(INSTRUCTION, $1, $2); }
-	;
-
-body: '{' { IDpush(); } bparam iparam { IDpop(); } '}'   { $$ = binNode(BODY, $3, $4); }
-	;
-
-for: FOR lval IN rval                            { $$ = binNode(FOR, $2, uniNode(IN, $4)); }
-	;
-
-forto: UPTO  rval                                { $$ = uniNode(UPTO,   $2); }
-	| DOWNTO rval                                { $$ = uniNode(DOWNTO, $2); }
-	;
-
-do: DO instr                                     { $$ = uniNode(DO, $2); }
-	;
-
-step:                                            { $$ = nilNode(STOP); }
-	| STEP rval                                  { $$ = uniNode(STEP, $2); }
-	;
-
-instr: IF rval THEN instr %prec IFX              { $$ = binNode(IF, $2, uniNode(THEN, $4)); }
-	| IF rval THEN instr ELSE instr              { $$ = binNode(IF, $2, binNode(THEN, $4, uniNode(ELSE, $6))); }
-	| do WHILE rval ';'                          { $$ = binNode(WHILE, $1, $3); }
-	| for forto step do                          {
-		$$ = binNode(FOR_BLOCK, $1, binNode(FORTO, $2, binNode(FORSTEP, $3, $4)));
-	}
-	| rval ';'                                   { $$ = $1; }
-	| body                                       { $$ = $1; }
-	| BREAK integer ';'                          { $$ = uniNode(BREAK, $2); }
-	| CONTINUE integer ';'                       { $$ = uniNode(CONTINUE, $2); }
-	| lval '#' rval ';'                          { $$ = binNode(STACK, $1, $3); }
-	;
-
-integer:                                         { $$ = nilNode(STOP); }
-	| INTEGER                                    { $$ = intNode(INTEGER, $1); }
-	;
-
-lval: ident                                      { $$ = $1; }
-	| lval '[' rval ']'                          { $$ = binNode(INDEX, $1, $3); }
-	| '*' lval %prec '*'                         { $$ = uniNode(LOAD, $2); }
-	;
-
-rval: lval,                                      { $$ = uniNode(LOAD, $1); }
-	| '(' rval ')'                               { $$ = $2; }
-	| cte                                        { $$ = $1; }
-	| rval '(' args ')'                          { $$ = binNode(CALL, $1, $3); }
-	| rval '(' ')'                               { $$ = binNode(CALL, $1, nilNode(STOP)); }
-		| '-' rval %prec UMINUS                  { $$ = uniNode(UMINUS, $2); }
-		| '!' rval                               { $$ = uniNode(NOT, $2);   }
-	| '&' lval %prec ADDR                        { $$ = uniNode(ADDR, $2);  }
-	| '~' rval                                   { $$ = uniNode(BNOT, $2);  }
-	| lval INC                                   { $$ = binNode(INC, $1, intNode(INTEGER, $1->info == 3 ? 4 : 1)); }
-	| lval DEC                                   { $$ = binNode(DEC, $1, intNode(INTEGER, $1->info == 3 ? 4 : 1)); }
-	| INC lval                                   { $$ = binNode(INC, intNode(INTEGER, $2->info == 3 ? 4 : 1), $2); }
-	| DEC lval                                   { $$ = binNode(DEC, intNode(INTEGER, $2->info == 3 ? 4 : 1), $2); }
-		| rval '*' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(MUL, $1, $3); }
-		| rval '/' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(DIV, $1, $3); }
-		| rval '%' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(MOD, $1, $3); }
-		| rval '+' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(ADD, $1, $3); }
-		| rval '-' rval	                         { if (!is_int_or_num($1) || !is_int_or_num($3)) { return 1; } $$ = binNode(SUBT, $1, $3); }
-	| rval '<' rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(LT, $1, $3); $$->info = TYPE_INT; }
-	| rval '>' rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(GT, $1, $3); $$->info = TYPE_INT; }
-	| rval LE rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(LE, $1, $3); $$->info = TYPE_INT; }
-	| rval GE rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(GE, $1, $3); $$->info = TYPE_INT; }
-	| rval NE rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(NE, $1, $3); $$->info = TYPE_INT; }
-	| rval '=' rval	                             { if (!can_cmp_val($1, $3)) { return 1; } $$ = binNode(EQ, $1, $3); $$->info = TYPE_INT; }
-		| rval '&' rval	                         { if (!is_int($1) || !is_int($3)) { return 1; } $$ = binNode(BAND, $1, $3); }
-		| rval '|' rval	                         { if (!is_int($1) || !is_int($3)) { return 1; } $$ = binNode(BOR, $1, $3); }
-	| lval ASSIGN rval                           { $$ = binNode(ASSIGN, $1, $3); }
-	;
-
-args: rval                                       { $$ = binNode(ARG, $1, nilNode(STOP)); }
-	| args ',' rval                              { $$ = binNode(ARG, $1, $3);  }
+expr: lval		{ $$ = uniNode(PTR, $1); $$->info = $1->info; }
+	| '*' lval        { $$ = uniNode(PTR, uniNode(PTR, $2)); if ($2->info % 5 == 2) $$->info = 1; else if ($2->info / 10 == 1) $$->info = $2->info % 10; else yyerror("can dereference lvalue"); }
+	| lval ASSIGN expr   { $$ = binNode(ASSIGN, $3, $1); if ($$->info % 10 > 5) yyerror("constant value to assignment"); if (noassign($1, $3)) yyerror("illegal assignment"); $$->info = $1->info; }
+	| INTEGER           { $$ = intNode(INTEGER, $1); $$->info = 1; }
+	| STRING           { $$ = strNode(STRING, $1); $$->info = 2; }
+	| NUMBER          { $$ = realNode(NUMBER, $1); $$->info = 3; }
+	| '-' expr %prec UMINUS { $$ = uniNode(UMINUS, $2); $$->info = $2->info; nostring($2, $2);}
+	| '~' expr %prec UMINUS { $$ = uniNode(NOT, $2); $$->info = intonly($2, 0); }
+	| '&' lval %prec UMINUS   { $$ = uniNode(REF, $2); $$->info = $2->info + 10; }
+	| expr '!'             { $$ = uniNode('!', $1); $$->info = 3; intonly($1, 0); }
+	| INC lval       { $$ = uniNode(INC, $2); $$->info = intonly($2, 1); }
+	| DEC lval       { $$ = uniNode(DEC, $2); $$->info = intonly($2, 1); }
+	| lval INC       { $$ = uniNode(POSINC, $1); $$->info = intonly($1, 1); }
+	| lval DEC       { $$ = uniNode(POSDEC, $1); $$->info = intonly($1, 1); }
+	| expr '+' expr { $$ = binNode('+', $1, $3); $$->info = nostring($1, $3); }
+	| expr '-' expr { $$ = binNode('-', $1, $3); $$->info = nostring($1, $3); }
+	| expr '*' expr { $$ = binNode('*', $1, $3); $$->info = nostring($1, $3); }
+	| expr '/' expr { $$ = binNode('/', $1, $3); $$->info = nostring($1, $3); }
+	| expr '%' expr { $$ = binNode('%', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
+	| expr '<' expr { $$ = binNode('<', $1, $3); $$->info = 1; }
+	| expr '>' expr { $$ = binNode('>', $1, $3); $$->info = 1; }
+	| expr GE expr  { $$ = binNode(GE, $1, $3); $$->info = 1; }
+	| expr LE expr  { $$ = binNode(LE, $1, $3); $$->info = 1; }
+	| expr NE expr  { $$ = binNode(NE, $1, $3); $$->info = 1; }
+	| expr '=' expr { $$ = binNode('=', $1, $3); $$->info = 1; }
+	| expr '&' expr { $$ = binNode('&', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
+	| expr '|' expr { $$ = binNode('|', $1, $3); $$->info = intonly($1, 0); intonly($3, 0); }
+	| '(' expr ')' { $$ = $2; $$->info = $2->info; }
+	| IDENTIFIER '(' args ')' { $$ = binNode(CALL, strNode(IDENTIFIER, $1), $3);
+                            $$->info = checkargs($1, $3); }
+	| IDENTIFIER '(' ')'    { $$ = binNode(CALL, strNode(IDENTIFIER, $1), nilNode(TYPE_VOID));
+                          $$->info = checkargs($1, 0); }
 	;
 
 %%
 
 /* ********************* Semantic analysis functions ********************* */
-/* is_ checking functions */
-bool is_any(const Node *n, NodeType *types, const char **types_str, int size)
+void declare(int pub, int cnst, Node *type, char *name, Node *value)
 {
-	int i;
-	char msg[256] = "Value is not of type";
+	int typ;
+	if (!value) {
+		if (!pub && cnst) yyerror("local constants must be initialised");
+		return;
+	}
+	/* if (value->attrib = INTEGER && value->value.i == 0 && type->value.i > 10) */
+	if (value->attrib == INTEGER && value->value.i == 0 && type->value.i > 10) { return; /* NULL pointer */ }
+	if ((typ = value->info) % 10 > 5) { typ -= 5; }
+	if (type->value.i != typ) {
+		yyerror("wrong types in initialization");
+	}
+}
 
-	for (i = 0; i < size; i++) {
-		if (n->type == types[i]) { return true; }
-		strcat(msg, " "); strcat(msg, types_str[i]); strcat(msg, ",");
+void enter(int pub, int typ, char *name) {
+	fpar = malloc(32); /* 31 arguments, at most */
+	fpar[0] = 0; /* argument count */
+	if (IDfind(name, (long*)IDtest) < 20) {
+		IDnew(typ+20, name, (long)fpar);
+	}
+	IDpush();
+	if (typ != 4) { IDnew(typ, name, 0); }
+}
+
+int checkargs(char *name, Node *args) {
+	char *arg;
+	int typ;
+    if ((typ = IDsearch(name, (long*)&arg,IDlevel(),1)) < 20) {
+		yyerror("ident not a function");
+		return 0;
+	}
+	if (args == 0 && arg[0] == 0) {
+		;
+	} else if (args == 0 && arg[0] != 0) {
+		yyerror("function requires no arguments");
+	} else if (args != 0 && arg[0] == 0) {
+		yyerror("function requires arguments");
+	} else {
+		int err = 0, null, i = arg[0], typ;
+		do {
+			Node *n;
+			if (i == 0) {
+				yyerror("too many arguments.");
+				err = 1;
+				break;
+			}
+			n = RIGHT_CHILD(args);
+			typ = n->info;
+			if (typ % 10 > 5) { typ -= 5; /* remove CONST */ }
+			null =  (n->attrib == INTEGER && n->value.i == 0 && arg[i] > 10) ? 1 : 0;
+			if (!null && arg[i] != typ) {
+				yyerror("wrong argument type");
+				err = 1;
+				break;
+			}
+			args = LEFT_CHILD(args);
+			i--;
+		} while (args->attrib != NIL);
+
+		if (!err && i > 0) {
+			yyerror("missing arguments");
+		}
 	}
 
-	yyerror(msg);
-	return false;
+	return typ % 20;
 }
 
-bool is_int(const Node *n)
-{
-	static NodeType types[] = { nodeInt };
-	static const char *types_str[] = { "integer" };
-	return is_any(n, types, types_str, arrlen(types));
-}
-
-bool is_num(const Node *n)
-{
-	static NodeType types[] = { nodeReal };
-	static const char *types_str[] = { "number" };
-	return is_any(n, types, types_str, arrlen(types));
-}
-
-bool is_str(const Node *n)
-{
-	static NodeType types[] = { nodeStr };
-	static const char *types_str[] = { "string" };
-	return is_any(n, types, types_str, arrlen(types));
-}
-
-bool is_int_or_num(const Node *n)
-{
-	static NodeType types[] = { nodeInt, nodeReal };
-	static const char *types_str[] = { "integer", "number" };
-	return is_any(n, types, types_str, arrlen(types));
-}
-
-bool is_val(const Node *n)
-{
-	static NodeType types[] = { nodeInt, nodeReal, nodeStr };
-	static const char *types_str[] = { "integer", "number", "string" };
-	return is_any(n, types, types_str, arrlen(types));
-}
-
-/* Comparator functions */
-#define node_value(n) \
-	n->type == nodeInt ? n->value.i : n->type == nodeReal ? n->value.d : n->type == nodeStr ? n->value.s : 0
-
-bool can_cmp_val(const Node *n1, const Node *n2) {
-	NodeType num_types[] = { nodeInt, nodeReal };
-
-	/* Checking if they're numbers */
-	if ((n1->type == num_types[0] && n2->type == num_types[1])
-	|| (n1->type == num_types[1] && n2->type == num_types[0])) {
-		return true;
+int nostring(Node *arg1, Node *arg2) {
+	if (arg1->info % 5 == 2 || arg2->info % 5 == 2) {
+		yyerror("cannot use strings");
 	}
-	/* Checking if they're of equal types */
-	if (n1->type == n2->type) {
-		return true;
-	}
+	return arg1->info % 5 == 3 || arg2->info % 5 == 3 ? 3 : 1;
+}
 
-	yyerror("Nodes are not of proper type");
-	return false;
+int intonly(Node *arg, int novar) {
+	if (arg->info % 5 != 1) {
+		yyerror("only integers can be used");
+	}
+	if (arg->info % 10 > 5) {
+		yyerror("argument is constant");
+	}
+	return 1;
+}
+
+int noassign(Node *arg1, Node *arg2) {
+	int t1 = arg1->info, t2 = arg2->info;
+	if (t1 == t2) { return 0; }
+	if (t1 == 3 && t2 == 1) { return 0; /* real := int */ }
+	if (t1 == 1 && t2 == 3) { return 0; /* int := real */ }
+	if (t1 == 2 && t2 == 11) { return 0; /* string := int* */ }
+	if (t1 == 2 && arg2->attrib == INTEGER && arg2->value.i == 0){
+		return 0; /* string := 0 */
+	}
+	if (t1 > 10 && t1 < 20 && arg2->attrib == INTEGER && arg2->value.i == 0) {
+		return 0; /* pointer := 0 */
+	}
+	return 1;
+}
+
+void function(int pub, Node *type, char *name, Node *body)
+{
+	Node *bloco = LEFT_CHILD(body);
+	IDpop();
+	if (bloco != 0) { /* not a forward declaration */
+		long par;
+		int fwd = IDfind(name, &par);
+		if (fwd > 40) { yyerror("duplicate function"); }
+		else { IDreplace(fwd+40, name, par); }
+	}
 }
 

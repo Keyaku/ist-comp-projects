@@ -1,19 +1,23 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #include "node.h"
 #include "diy.h"
 
-extern int yylex(), yyparse(void);
 extern void* yyin;
 extern void* yyout;
-extern char **yyname;
-int tk;
+extern int IDdebug;
+
+FILE *outfp;
 
 char *infile = "<<stdin>>",
-	*outfile = NULL;
+	outfile[64] = "out.asm",
+	*ext = ".asm";
 
-int errors;
+int errors, trace;
 
 #ifndef YYERRCODE
 #define YYERRCODE 256
@@ -42,6 +46,9 @@ int yyerror(char *s, ...)
 
 /* **************************** MAIN **************************** */
 int lexer() {
+	extern int yylex();
+	extern char **yyname;
+	int tk;
 	/* Outputting lexer content */
 	while ((tk = yylex())) {
 		if (tk > YYERRCODE) {
@@ -55,20 +62,54 @@ int lexer() {
 }
 
 int compiler() {
-	return yyparse();
+	extern int yyparse(void);
+	if (yyparse() != 0 || errors > 0) {
+		fprintf(stderr, "%d errors in %s\n", errors, infile);
+		fclose(yyout); yyout = NULL;
+		unlink(outfile);
+		return 1;
+	}
+	return 0;
 }
 
 typedef enum { LEXER = 0, COMPILER, ASSEMBLY } Mode;
 int (*fn[])() = { lexer, compiler };
 
 int main(int argc, char *argv[]) {
+#ifdef YYDEBUG
+	extern int yydebug;
+	yydebug = getenv("YYDEBUG") ? 1 : 0;
+#endif
 	int retval = 0;
 	Mode mode = COMPILER;
 
+	/* Checking for trace flag */
+	if (argc > 1 && strcmp(argv[1], "-trace") == 0) { IDdebug = trace = 1; argc--; argv++; }
+
 	/* Opening file from input or from given argument */
 	if (argc > 1) {
-		infile = argv[1];
-		yyin = fopen(infile, "r");
+		if ((yyin = fopen(infile = argv[1], "r")) == NULL) {
+			perror(argv[1]);
+			return 1;
+		}
+		argc--; argv++;
+	}
+
+	/* Preparing output file */
+	if (argc == 1) {
+		char *ptr;
+		outfile[0] = 0;
+		strcpy(outfile, argv[0]);
+		if ((ptr = strrchr(outfile, '.')) == 0) {
+			ptr = outfile + strlen(outfile);
+		}
+		strcpy(ptr, ext);
+	}
+	else if (argc > 1) { strcpy(outfile, argv[1]); }
+
+	if ((yyout = fopen(outfile, "w")) == NULL) {
+		perror(outfile);
+		return 1;
 	}
 
 	/* Executing the appropriate code for this part */

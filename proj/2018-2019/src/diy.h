@@ -11,7 +11,5 @@ enum { false, true };
 
 /* Yacc material */
 int yyerror(char *s, ...);
-extern void* yyout;
-int tk;
 
 #endif
