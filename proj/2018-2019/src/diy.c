@@ -11,17 +11,11 @@ extern void* yyin;
 extern void* yyout;
 extern int IDdebug;
 
-FILE *outfp;
-
 char *infile = "<<stdin>>",
 	outfile[64] = "out.asm",
 	*ext = ".asm";
 
 int errors, trace;
-
-#ifndef YYERRCODE
-#define YYERRCODE 256
-#endif
 
 
 /* Auxiliary */
@@ -51,7 +45,7 @@ int lexer() {
 	int tk;
 	/* Outputting lexer content */
 	while ((tk = yylex())) {
-		if (tk > YYERRCODE) {
+		if (tk > 256) {
 			printf("%d:\t%s\n", tk, yyname[tk]);
 		} else {
 			printf("%d:\t%c\n", tk, tk);
