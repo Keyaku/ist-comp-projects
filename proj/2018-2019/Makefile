@@ -22,8 +22,8 @@ all: $(EXEC)
 
 $(EXEC): $(CINFILES) $(LANG).l $(LANG).y $(LANG).brg
 	make -C $(LIB)
-	flex -o $(LEXFILES) -l $(LANG).l
 	byacc -o $(YACCFILES) -dvr $(LANG).y
+	flex -o $(LEXFILES) -l $(LANG).l
 	pburg -T $(LANG).brg $(BURGFILES)
 	$(LINK.c) -o $@ $(ARCH) $(COUTFILES) $(LANG).c
 

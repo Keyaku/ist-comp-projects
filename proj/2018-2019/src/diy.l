@@ -7,12 +7,13 @@
 #include <string.h>
 #include <errno.h>
 
+#include "diy.h"
 #include "node.h"
 #include "y.tab.h"
 static int eoi; /* end of instruction */
 static int ncom; /* comment nesting level */
 static int in; /* in string */
-void yyerror(char *s);
+
 int octal(char *s);
 
 %}
