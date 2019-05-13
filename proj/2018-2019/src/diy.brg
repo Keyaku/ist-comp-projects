@@ -3,16 +3,57 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "diy.h"
 #include "node.h"
 #include "tabid.h"
 #include "postfix.h"
-%}
-%term END=';'
-%include "y.tab.h"
-%%
-stmt:	END	1	{	}
-%%
 #include "y.tab.h"
-extern void yyerror(const char*);
+
+extern FILE *outfp;
 extern char **yynames;
 extern int trace;
+
+%}
+
+%term END=';'
+%term ADD='+' SUB='-' MUL='*' DIV='/' MOD='%'
+%term AND='&' OR='|'
+%term EQ='=' LT='<' GT='>'
+
+%include "src/y.tab.h"
+
+%%
+
+stmt:     END                       1 { }
+
+expr:     INTEGER                   1 { fprintf(outfp, pfIMM, p->value.i); }
+expr:     NUMBER                    1 { fprintf(outfp, pfIMM, p->value.r); }
+expr:     STRING                    1 { lbl++; fprintf(outfp, pfRODATA pfALIGN pfLABEL, mklbl(lbl)); outstr(p->value.s); fprintf(outfp, pfTEXT pfADDR, mklbl(lbl)); }
+
+expr:     ADD(expr,expr)            1 { fprintf(outfp, pfADD);   }
+expr:     SUB(expr,expr)            1 { fprintf(outfp, pfSUB);   }
+expr:     MUL(expr,expr)            1 { fprintf(outfp, pfMUL);   }
+expr:     DIV(expr,expr)            1 { fprintf(outfp, pfDIV);   }
+expr:     MOD(expr,expr)            1 { fprintf(outfp, pfMOD);   }
+expr:     EQ(expr,expr)             1 { fprintf(outfp, pfEQ);    }
+expr:     NE(expr,expr)             1 { fprintf(outfp, pfNE);    }
+expr:     LT(expr,expr)             1 { fprintf(outfp, pfLT);    }
+expr:     LE(expr,expr)             1 { fprintf(outfp, pfLE);    }
+expr:     GT(expr,expr)             1 { fprintf(outfp, pfGT);    }
+expr:     GE(expr,expr)             1 { fprintf(outfp, pfGE);    }
+expr:     UMINUS(expr)              1 { fprintf(outfp, pfNEG);   }
+expr:     NOT(expr)                 1 { fprintf(outfp, pfIMM pfEQ, 0); }
+expr:     AND(and,expr)             1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+and:      expr                      1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJZ pfTRASH, mklbl(p->place), pfWORD);  }
+expr:     OR(or,expr)               1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+or:       expr                      1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJNZ pfTRASH, mklbl(p->place), pfWORD); }
+
+%! pre/post in/de-crement
+expr:     INC(INTEGER, lval)        1 { fprintf(outfp, pfDUP pfINCR pfLOAD, LEFT_CHILD(p)->value.i); }
+expr:     DEC(INTEGER, lval)        1 { fprintf(outfp, pfDUP pfDECR pfLOAD, LEFT_CHILD(p)->value.i); }
+expr:     INC(lval, INTEGER)        1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfINCR, RIGHT_CHILD(p)->value.i); }
+expr:     DEC(lval, INTEGER)        1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfDECR, RIGHT_CHILD(p)->value.i); }
+
+%%
+
