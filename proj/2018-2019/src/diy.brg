@@ -10,9 +10,16 @@
 #include "postfix.h"
 #include "y.tab.h"
 
-extern FILE *outfp;
+extern FILE *yyout;
 extern char **yynames;
 extern int trace;
+
+int lbl;
+char *mklbl(int n) {
+	static char buf[20];
+	sprintf(buf, "_i%d", n);
+	return strcpy(malloc(strlen(buf)+1),buf);
+}
 
 %}
 
@@ -25,35 +32,26 @@ extern int trace;
 
 %%
 
+stmt:     expr                      1 { fprintf(yyout, pfTRASH, pfWORD); }
 stmt:     END                       1 { }
 
-expr:     INTEGER                   1 { fprintf(outfp, pfIMM, p->value.i); }
-expr:     NUMBER                    1 { fprintf(outfp, pfIMM, p->value.r); }
-expr:     STRING                    1 { lbl++; fprintf(outfp, pfRODATA pfALIGN pfLABEL, mklbl(lbl)); outstr(p->value.s); fprintf(outfp, pfTEXT pfADDR, mklbl(lbl)); }
-
-expr:     ADD(expr,expr)            1 { fprintf(outfp, pfADD);   }
-expr:     SUB(expr,expr)            1 { fprintf(outfp, pfSUB);   }
-expr:     MUL(expr,expr)            1 { fprintf(outfp, pfMUL);   }
-expr:     DIV(expr,expr)            1 { fprintf(outfp, pfDIV);   }
-expr:     MOD(expr,expr)            1 { fprintf(outfp, pfMOD);   }
-expr:     EQ(expr,expr)             1 { fprintf(outfp, pfEQ);    }
-expr:     NE(expr,expr)             1 { fprintf(outfp, pfNE);    }
-expr:     LT(expr,expr)             1 { fprintf(outfp, pfLT);    }
-expr:     LE(expr,expr)             1 { fprintf(outfp, pfLE);    }
-expr:     GT(expr,expr)             1 { fprintf(outfp, pfGT);    }
-expr:     GE(expr,expr)             1 { fprintf(outfp, pfGE);    }
-expr:     UMINUS(expr)              1 { fprintf(outfp, pfNEG);   }
-expr:     NOT(expr)                 1 { fprintf(outfp, pfIMM pfEQ, 0); }
-expr:     AND(and,expr)             1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
-and:      expr                      1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJZ pfTRASH, mklbl(p->place), pfWORD);  }
-expr:     OR(or,expr)               1 { fprintf(outfp, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
-or:       expr                      1 { p->place = ++lbl; fprintf(outfp, pfDUP pfJNZ pfTRASH, mklbl(p->place), pfWORD); }
-
-%! pre/post in/de-crement
-expr:     INC(INTEGER, lval)        1 { fprintf(outfp, pfDUP pfINCR pfLOAD, LEFT_CHILD(p)->value.i); }
-expr:     DEC(INTEGER, lval)        1 { fprintf(outfp, pfDUP pfDECR pfLOAD, LEFT_CHILD(p)->value.i); }
-expr:     INC(lval, INTEGER)        1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfINCR, RIGHT_CHILD(p)->value.i); }
-expr:     DEC(lval, INTEGER)        1 { fprintf(outfp, pfDUP pfLOAD pfSWAP pfDECR, RIGHT_CHILD(p)->value.i); }
+expr:     ADD(expr,expr)            1 { fprintf(yyout, pfADD);   }
+expr:     SUB(expr,expr)            1 { fprintf(yyout, pfSUB);   }
+expr:     MUL(expr,expr)            1 { fprintf(yyout, pfMUL);   }
+expr:     DIV(expr,expr)            1 { fprintf(yyout, pfDIV);   }
+expr:     MOD(expr,expr)            1 { fprintf(yyout, pfMOD);   }
+expr:     EQ(expr,expr)             1 { fprintf(yyout, pfEQ);    }
+expr:     NE(expr,expr)             1 { fprintf(yyout, pfNE);    }
+expr:     LT(expr,expr)             1 { fprintf(yyout, pfLT);    }
+expr:     LE(expr,expr)             1 { fprintf(yyout, pfLE);    }
+expr:     GT(expr,expr)             1 { fprintf(yyout, pfGT);    }
+expr:     GE(expr,expr)             1 { fprintf(yyout, pfGE);    }
+expr:     UMINUS(expr)              1 { fprintf(yyout, pfNEG);   }
+expr:     NOT(expr)                 1 { fprintf(yyout, pfIMM pfEQ, 0); }
+expr:     AND(and,expr)             1 { fprintf(yyout, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+and:      expr                      1 { p->place = ++lbl; fprintf(yyout, pfDUP pfJZ pfTRASH, mklbl(p->place), pfWORD);  }
+expr:     OR(or,expr)               1 { fprintf(yyout, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+or:       expr                      1 { p->place = ++lbl; fprintf(yyout, pfDUP pfJNZ pfTRASH, mklbl(p->place), pfWORD); }
 
 %%
 
