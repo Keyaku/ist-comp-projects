@@ -66,7 +66,7 @@ int compiler() {
 	return 0;
 }
 
-typedef enum { LEXER = 0, COMPILER, ASSEMBLY } Mode;
+typedef enum { LEXER = 0, COMPILER } Mode;
 int (*fn[])() = { lexer, compiler };
 
 int main(int argc, char *argv[]) {
