@@ -14,17 +14,17 @@ CINFILES = $(LANG).c $(LANG).h
 LEXFILES = $(SRCDIR)/lex.yy.c
 YACCFILES= $(SRCDIR)/y.tab.c
 BURGFILES= $(SRCDIR)/yyselect.c
-COUTFILES = $(LEXFILES) $(YACCFILES) $(SRCDIR)/y.code.c #$(BURGFILES)
+COUTFILES = $(LEXFILES) $(YACCFILES) $(SRCDIR)/y.code.c $(BURGFILES)
 
 
 # RULES
 all: $(EXEC)
 
-$(EXEC): $(CINFILES) $(LANG).l $(LANG).y #$(LANG).brg
+$(EXEC): $(CINFILES) $(LANG).l $(LANG).y $(LANG).brg
 	make -C $(LIB)
 	flex -o $(LEXFILES) -l $(LANG).l
 	byacc -o $(YACCFILES) -dvr $(LANG).y
-	#pburg -T $(LANG).brg
+	pburg -T $(LANG).brg $(BURGFILES)
 	$(LINK.c) -o $@ $(ARCH) $(COUTFILES) $(LANG).c
 
 
