@@ -63,11 +63,11 @@ file:
 	| file public TYPE_VOID IDENTIFIER         { enter($2, 4, $4); } finit { function($2, intNode(TYPE_VOID, 4), $4, $6); }
 	;
 
-public:                          { $$ = 0; }
+public:                          { $$ = nilNode(NIL); }
 	| PUBLIC                     { $$ = 1; }
 	;
 
-ptr:                             { $$ = 0; }
+ptr:                             { $$ = nilNode(NIL); }
 	| '*'                        { $$ = 10; }
 	;
 
@@ -89,7 +89,7 @@ finit: '(' params ')' blocop     { $$ = binNode('(', $4, $2); }
 	| '(' ')' blocop             { $$ = binNode('(', $3, 0); }
 	;
 
-blocop: ';'                      { $$ = 0; }
+blocop: ';'                      { $$ = nilNode(NIL); }
 	| bloco ';'                  { $$ = $1; }
 	;
 
@@ -97,10 +97,10 @@ params: param
 	| params ',' param           { $$ = binNode(',', $1, $3); }
 	;
 
-bloco: '{' { IDpush(); } decls list end '}'    { $$ = binNode('{', $5 ? binNode(';', $4, $5) : $4, $3); IDpop(); }
+bloco: '{' { IDpush(); } decls list end '}'    { $$ = binNode('{', $5->attrib == NIL ? binNode(';', $4, $5) : $4, $3); IDpop(); }
 	;
 
-decls:                           { $$ = 0; }
+decls:                           { $$ = nilNode(NIL); }
 	| decls param ';'            { $$ = binNode(';', $1, $2); }
 	;
 
@@ -110,8 +110,8 @@ param: type IDENTIFIER           { $$ = binNode(PARAM, $1, strNode(IDENTIFIER, $
 	}
 	;
 
-stmt: base
-	| brk
+stmt: base                       { $$ = $1; }
+	| brk                        { $$ = $1; }
 	;
 
 base: ';'                        { $$ = nilNode(TYPE_VOID); }
@@ -126,8 +126,8 @@ base: ';'                        { $$ = nilNode(TYPE_VOID); }
 	| error ';'                  { $$ = nilNode(NIL); }
 	;
 
-end:		{ $$ = 0; }
-	| brk;
+end:                             { $$ = nilNode(NIL); }
+	| brk;                       { $$ = $1; }
 
 brk: BREAK intp ';'              { $$ = intNode(BREAK, $2);    if ($2 <= 0 || $2 > ncicl) yyerror("invalid break argument"); }
 	| CONTINUE intp ';'          { $$ = intNode(CONTINUE, $2); if ($2 <= 0 || $2 > ncicl) yyerror("invalid continue argument"); }
@@ -138,10 +138,10 @@ step:                            { $$ = intNode(INTEGER, 1); }
 	;
 
 intp:                            { $$ = 1; }
-	| INTEGER
+	| INTEGER                    { $$ = $1->value.i; }
 	;
 
-list: base
+list: base                       { $$ = $1; }
 	| list base                  { $$ = binNode(';', $1, $2); }
 	;
 
@@ -283,7 +283,7 @@ int intonly(Node *arg, int novar) {
 	if (arg->info % 5 != 1) {
 		yyerror("only integers can be used");
 	}
-	if (arg->info % 10 > 5) {
+	if (arg->info % 10 > 5 && novar) {
 		yyerror("argument is constant");
 	}
 	return 1;
