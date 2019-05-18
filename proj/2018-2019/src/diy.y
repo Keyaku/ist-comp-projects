@@ -63,11 +63,11 @@ file:
 	| file public TYPE_VOID IDENTIFIER         { enter($2, 4, $4); } finit { function($2, intNode(TYPE_VOID, 4), $4, $6); }
 	;
 
-public:
+public:                          { $$ = 0; }
 	| PUBLIC                     { $$ = 1; }
 	;
 
-ptr:
+ptr:                             { $$ = 0; }
 	| '*'                        { $$ = 10; }
 	;
 
