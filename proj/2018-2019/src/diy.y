@@ -55,9 +55,9 @@ static char *fpar;
 
 file:
 	| file error ';'
-	| file public type IDENTIFIER ';'          { IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, 0); }
+	| file public type IDENTIFIER ';'          { IDnew($3->value.i, $4, 0);   declare($2, 0, $3, $4, 0); }
 	| file public CONST type IDENTIFIER ';'    { IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, 0); }
-	| file public type IDENTIFIER init         { IDnew($3->value.i, $4, 0); declare($2, 0, $3, $4, $5); }
+	| file public type IDENTIFIER init         { IDnew($3->value.i, $4, 0);   declare($2, 0, $3, $4, $5); }
 	| file public CONST type IDENTIFIER init   { IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, $6); }
 	| file public type IDENTIFIER              { enter($2, $3->value.i, $4); } finit { function($2, $3, $4, $6); }
 	| file public TYPE_VOID IDENTIFIER         { enter($2, 4, $4); } finit { function($2, intNode(TYPE_VOID, 4), $4, $6); }
@@ -129,7 +129,7 @@ base: ';'                        { $$ = nilNode(TYPE_VOID); }
 end:		{ $$ = 0; }
 	| brk;
 
-brk: BREAK intp ';'              { $$ = intNode(BREAK, $2); if ($2 <= 0 || $2 > ncicl) yyerror("invalid break argument"); }
+brk: BREAK intp ';'              { $$ = intNode(BREAK, $2);    if ($2 <= 0 || $2 > ncicl) yyerror("invalid break argument"); }
 	| CONTINUE intp ';'          { $$ = intNode(CONTINUE, $2); if ($2 <= 0 || $2 > ncicl) yyerror("invalid continue argument"); }
 	;
 
