@@ -63,11 +63,11 @@ file:
 	| file public TYPE_VOID IDENTIFIER         { enter($2, 4, $4); } finit { function($2, intNode(TYPE_VOID, 4), $4, $6); }
 	;
 
-public:                          { $$ = nilNode(NIL); }
+public:
 	| PUBLIC                     { $$ = 1; }
 	;
 
-ptr:                             { $$ = nilNode(NIL); }
+ptr:
 	| '*'                        { $$ = 10; }
 	;
 
@@ -127,7 +127,8 @@ base: ';'                        { $$ = nilNode(TYPE_VOID); }
 	;
 
 end:                             { $$ = nilNode(NIL); }
-	| brk;                       { $$ = $1; }
+	| brk                        { $$ = $1; }
+	;
 
 brk: BREAK intp ';'              { $$ = intNode(BREAK, $2);    if ($2 <= 0 || $2 > ncicl) yyerror("invalid break argument"); }
 	| CONTINUE intp ';'          { $$ = intNode(CONTINUE, $2); if ($2 <= 0 || $2 > ncicl) yyerror("invalid continue argument"); }
@@ -138,7 +139,7 @@ step:                            { $$ = intNode(INTEGER, 1); }
 	;
 
 intp:                            { $$ = 1; }
-	| INTEGER                    { $$ = $1->value.i; }
+	| INTEGER                    { $$ = $1; }
 	;
 
 list: base                       { $$ = $1; }

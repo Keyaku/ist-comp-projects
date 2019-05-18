@@ -25,7 +25,7 @@ $(EXEC): $(CINFILES) $(LANG).l $(LANG).y $(LANG).brg
 	byacc -o $(YACCFILES) -dvr $(LANG).y
 	flex -o $(LEXFILES) -l $(LANG).l
 	pburg -T $(LANG).brg $(BURGFILES)
-	$(LINK.c) -o $@ $(ARCH) $(COUTFILES) $(LANG).c
+	$(LINK.c) $(LANG).c -o $@ $(ARCH) $(COUTFILES)
 
 
 examples:: $(LANG)
