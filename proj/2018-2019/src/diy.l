@@ -89,7 +89,7 @@ int octal(char *s)
 	int i, a = 0, b = 0;
 
 	for (i = 0; i < strlen(s); i++) {
-    if (s[i] < '0' || s[i] > '9') break;
+		if (s[i] < '0' || s[i] > '9') break;
 		b = b * 8 + s[i] - '0';
 		if (b < a) {
 			yyerror("octal overflow");
