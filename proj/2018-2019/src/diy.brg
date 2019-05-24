@@ -47,25 +47,21 @@ static char *mkfunc(char *s) {
 
 %%
 
-func:     FINIT(params, blocop)     1 {}
+%!func:     FINIT(params, blocop)     1 {}
 
-type:     TYPE_VOID
-type:     TYPE_INT
-type:     TYPE_NUM
-type:     TYPE_STR
+blocop:   NIL                         {}
+blocop:   bloco                       {}
+bloco:    BLOCK(list, decls)        1 {}
 
-blocop:   BLOCK(bloco)              1 {}
-bloco:    expr                      1 {}
+decls:    END(decls, base)          1 {}
 
-params:   param                     1 {}
-params:   ARG(param, params)        1 {}
-param:    PARAM(type, IDENTIFIER)   1 {}
+base:     expr                      1 {}
+
 
 expr:     CALL(IDENTIFIER,args)     1 { fprintf(yyout, pfCALL pfTRASH pfPUSH, mkfunc(LEFT_CHILD(LEFT_CHILD(p))->value.s), (int)(pfWORD*(RIGHT_CHILD(p)->place))); }
-args:     ARG(arg,args)               { p->place =  ((LEFT_CHILD(p)->place) + (RIGHT_CHILD(p)->place)); }
-args:     END                         { p->place = 0; }
-arg:      expr                      1 { p->place = 1; }
+args:     ARG(args,expr)              { p->place =  ((LEFT_CHILD(p)->place) + (RIGHT_CHILD(p)->place)); }
 
+list:     END(list, base)           1 {}
 
 expr:     INTEGER                   1 { fprintf(yyout, pfIMM, p->value.i); }
 expr:     NUMBER                    1 { fprintf(yyout, pfFLOAT, p->value.r); }

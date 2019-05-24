@@ -59,8 +59,8 @@ file:
 	| file public CONST type IDENTIFIER ';'    { IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, 0); }
 	| file public type IDENTIFIER init         { IDnew($3->value.i, $4, 0);   declare($2, 0, $3, $4, $5); }
 	| file public CONST type IDENTIFIER init   { IDnew($4->value.i+5, $5, 0); declare($2, 1, $4, $5, $6); }
-	| file public type IDENTIFIER              { enter($2, $3->value.i, $4); } finit { function($2, $3, $4, $6); }
-	| file public TYPE_VOID IDENTIFIER         { enter($2, 4, $4); } finit { function($2, intNode(TYPE_VOID, 4), $4, $6); }
+	| file public type IDENTIFIER              { enter($2, $3->value.i, $4); } finit { function($2, $3, $4, LEFT_CHILD($6)); }
+	| file public TYPE_VOID IDENTIFIER         { enter($2, 4, $4); } finit { function($2, intNode(TYPE_VOID, 4), $4, LEFT_CHILD($6)); }
 	;
 
 public:                          { $$ = 0; }
