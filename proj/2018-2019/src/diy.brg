@@ -67,6 +67,29 @@ args:     END                         { p->place = 0; }
 arg:      expr                      1 { p->place = 1; }
 
 
+expr:     INTEGER                   1 { fprintf(yyout, pfIMM, p->value.i); }
+expr:     NUMBER                    1 { fprintf(yyout, pfFLOAT, p->value.r); }
+expr:     STRING                    1 { lbl++; fprintf(yyout, pfRODATA pfALIGN pfLABEL, mklbl(lbl)); outstr(p->value.s); fprintf(yyout, pfTEXT pfADDR, mklbl(lbl)); }
+
+
+expr:     ADD(expr,expr)            1 { fprintf(yyout, pfADD);   }
+expr:     SUB(expr,expr)            1 { fprintf(yyout, pfSUB);   }
+expr:     MUL(expr,expr)            1 { fprintf(yyout, pfMUL);   }
+expr:     DIV(expr,expr)            1 { fprintf(yyout, pfDIV);   }
+expr:     MOD(expr,expr)            1 { fprintf(yyout, pfMOD);   }
+expr:     EQ(expr,expr)             1 { fprintf(yyout, pfEQ);    }
+expr:     NE(expr,expr)             1 { fprintf(yyout, pfNE);    }
+expr:     LT(expr,expr)             1 { fprintf(yyout, pfLT);    }
+expr:     LE(expr,expr)             1 { fprintf(yyout, pfLE);    }
+expr:     GT(expr,expr)             1 { fprintf(yyout, pfGT);    }
+expr:     GE(expr,expr)             1 { fprintf(yyout, pfGE);    }
+expr:     UMINUS(expr)              1 { fprintf(yyout, pfNEG);   }
+expr:     NOT(expr)                 1 { fprintf(yyout, pfIMM pfEQ, 0); }
+expr:     AND(and,expr)             1 { fprintf(yyout, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+and:      expr                      1 { p->place = ++lbl; fprintf(yyout, pfDUP pfJZ pfTRASH, mklbl(p->place), pfWORD);  }
+expr:     OR(or,expr)               1 { fprintf(yyout, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
+or:       expr                      1 { p->place = ++lbl; fprintf(yyout, pfDUP pfJNZ pfTRASH, mklbl(p->place), pfWORD); }
+
 %%
 
 
