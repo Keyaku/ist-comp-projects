@@ -3,8 +3,15 @@ COMP=../diy # compiler
 EXT=diy # file extension: .$(EXT)
 LIB=diy # runtime library: lib$(LIB).a
 RUN=../run # runtime directory
-AS=nasm -felf32 # assembler command
-LD=ld -melf_i386 # loader command
+
+ifeq ($(shell uname -s), Darwin)
+	AS = nasm -fmacho32
+	LD = ld
+else
+	AS = nasm -felf32 # assembler command
+	LD = ld -melf_i386 # loader command
+endif
+
 
 SRC=$(wildcard *.diy)
 EXE=$(SRC:%.diy=%)
