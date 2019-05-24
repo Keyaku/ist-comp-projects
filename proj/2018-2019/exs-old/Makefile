@@ -7,6 +7,7 @@ RUN=../run # runtime directory
 ifeq ($(shell uname -s), Darwin)
 	AS = nasm -fmacho32
 	LD = ld
+	#LD = i386-elf-ld
 else
 	AS = nasm -felf32 # assembler command
 	LD = ld -melf_i386 # loader command
