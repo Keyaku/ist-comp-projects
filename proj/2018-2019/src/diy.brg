@@ -37,7 +37,7 @@ static char *mkfunc(char *s) {
 
 %}
 
-%term ARG=','
+%term ARG=',' FINIT='(' BLOCK='{'
 %term END=';'
 %term ADD='+' SUB='-' MUL='*' DIV='/' MOD='%'
 %term AND='&' OR='|'
@@ -47,36 +47,25 @@ static char *mkfunc(char *s) {
 
 %%
 
-stmt:     expr                      1 { fprintf(yyout, pfTRASH, pfWORD); }
-stmt:     END
+func:     FINIT(params, blocop)     1 {}
+
+type:     TYPE_VOID
+type:     TYPE_INT
+type:     TYPE_NUM
+type:     TYPE_STR
+
+blocop:   BLOCK(bloco)              1 {}
+bloco:    expr                      1 {}
+
+params:   param                     1 {}
+params:   ARG(param, params)        1 {}
+param:    PARAM(type, IDENTIFIER)   1 {}
 
 expr:     CALL(IDENTIFIER,args)     1 { fprintf(yyout, pfCALL pfTRASH pfPUSH, mkfunc(LEFT_CHILD(LEFT_CHILD(p))->value.s), (int)(pfWORD*(RIGHT_CHILD(p)->place))); }
 args:     ARG(arg,args)               { p->place =  ((LEFT_CHILD(p)->place) + (RIGHT_CHILD(p)->place)); }
 args:     END                         { p->place = 0; }
 arg:      expr                      1 { p->place = 1; }
 
-expr:     INTEGER                   1 { fprintf(yyout, pfIMM, p->value.i); }
-expr:     NUMBER                    1 { fprintf(yyout, pfFLOAT, p->value.r); }
-expr:     STRING                    1 { lbl++; fprintf(yyout, pfRODATA pfALIGN pfLABEL, mklbl(lbl)); outstr(p->value.s); fprintf(yyout, pfTEXT pfADDR, mklbl(lbl)); }
-
-
-expr:     ADD(expr,expr)            1 { fprintf(yyout, pfADD);   }
-expr:     SUB(expr,expr)            1 { fprintf(yyout, pfSUB);   }
-expr:     MUL(expr,expr)            1 { fprintf(yyout, pfMUL);   }
-expr:     DIV(expr,expr)            1 { fprintf(yyout, pfDIV);   }
-expr:     MOD(expr,expr)            1 { fprintf(yyout, pfMOD);   }
-expr:     EQ(expr,expr)             1 { fprintf(yyout, pfEQ);    }
-expr:     NE(expr,expr)             1 { fprintf(yyout, pfNE);    }
-expr:     LT(expr,expr)             1 { fprintf(yyout, pfLT);    }
-expr:     LE(expr,expr)             1 { fprintf(yyout, pfLE);    }
-expr:     GT(expr,expr)             1 { fprintf(yyout, pfGT);    }
-expr:     GE(expr,expr)             1 { fprintf(yyout, pfGE);    }
-expr:     UMINUS(expr)              1 { fprintf(yyout, pfNEG);   }
-expr:     NOT(expr)                 1 { fprintf(yyout, pfIMM pfEQ, 0); }
-expr:     AND(and,expr)             1 { fprintf(yyout, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
-and:      expr                      1 { p->place = ++lbl; fprintf(yyout, pfDUP pfJZ pfTRASH, mklbl(p->place), pfWORD);  }
-expr:     OR(or,expr)               1 { fprintf(yyout, pfLABEL, mklbl(LEFT_CHILD(p)->place)); }
-or:       expr                      1 { p->place = ++lbl; fprintf(yyout, pfDUP pfJNZ pfTRASH, mklbl(p->place), pfWORD); }
 
 %%
 
@@ -93,7 +82,7 @@ void function(int pub, Node *type, char *name, Node *body)
 	}
 
 	fflush(stdout);
-	if (trace) printNode(body, stdout, yyname);
+	// if (trace) printNode(body, stdout, yyname);
 
 	fprintf(yyout, pfTEXT pfALIGN pfGLOBL pfLABEL pfENTER, name, pfFUNC, name, 0);
 	yyselect(body);
