@@ -33,7 +33,7 @@ examples:: $(LANG)
 	make -C $(EXS)
 
 zip::
-	zip -r proj.zip Makefile $(SRCDIR) $(LIB) $(EXS)
+	zip -r proj.zip Makefile $(SRCDIR) $(LIB) $(EXS) $(RUN)
 
 clean::
 	make -C $(LIB) clean
